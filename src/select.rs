@@ -1,31 +1,33 @@
-use sqlparser::ast::Select;
+use sqlparser::ast::{Select, SelectItem};
 
-use crate::{nullable::Nullable, statement::StatementExpr, ColumnExprs, Source, Tables};
+use crate::{expr::visit_expr, nullable::Nullable, Source, Tables};
 
 pub fn nullable_from_select(select: &Select, source: &Source) -> Nullable {
     let mut active_tables = Tables::new();
-    let mut active_cols = ColumnExprs::new();
 
     for table in &select.from {
         active_tables.visit_join_active_table(table, source);
     }
 
-    for column in &select.projection {
-        let c = active_tables.push_select_item(&column);
-        active_cols.push(c);
+    active_tables.update_nullable_from_select(select);
+
+    println!("{active_tables:#?}");
+
+    let n: Vec<_> = select
+        .projection
+        .iter()
+        .map(|c| visit_select_item(c, &active_tables).unwrap_or(true))
+        .collect();
+
+    Nullable::new(n)
+}
+
+pub fn visit_select_item(select_item: &SelectItem, tables: &Tables) -> Option<bool> {
+    match select_item {
+        SelectItem::UnnamedExpr(expr) => visit_expr(&expr, None, tables),
+        SelectItem::ExprWithAlias { expr, alias } => {
+            visit_expr(&expr, Some(alias.value.clone()), tables)
+        }
+        _ => None,
     }
-
-    let mut x = StatementExpr {
-        tables: active_tables,
-        cols: active_cols,
-    };
-
-    x.update_nullable_from_select(select);
-
-    let mut inferred_nullable = x.get_nullable(source);
-    for (i, col) in x.cols.iter().enumerate() {
-        inferred_nullable[i] = inferred_nullable[i] || col.get_nullable(&x, source);
-    }
-
-    Nullable::new(inferred_nullable)
 }

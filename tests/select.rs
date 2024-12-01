@@ -603,24 +603,182 @@ pub fn select_not_exists1() {
     assert!(nullable == [false])
 }
 
-// #[test]
-// pub fn select_func1() {
-//     let user_table = Table::new("users")
-//         .push_column("id", false)
-//         .push_column("username", false)
-//         .push_column("age", false);
+#[test]
+pub fn select_func1() {
+    let user_table = Table::new("users")
+        .push_column("id", false)
+        .push_column("username", false)
+        .push_column("age", false);
 
-//     let source = Source::new(vec![user_table]);
+    let source = Source::new(vec![user_table]);
 
-//     let query = r#"
-//         select
-//             avg(users.age)
-//         from
-//             users
-//  "#;
+    let query = r#"
+        select
+            avg(users.age)
+        from
+            users
+ "#;
 
-//     let mut state = NullableState::new(query, source);
-//     let nullable = state.get_nullable();
-//     println!("{:?}", nullable);
-//     assert!(nullable == [false])
-// }
+    let mut state = NullableState::new(query, source);
+    let nullable = state.get_nullable();
+    println!("{:?}", nullable);
+    assert!(nullable == [false])
+}
+
+#[test]
+pub fn select_func2() {
+    let user_table = Table::new("users")
+        .push_column("id", false)
+        .push_column("username", false)
+        .push_column("age", true);
+
+    let source = Source::new(vec![user_table]);
+
+    let query = r#"
+        select
+            avg(users.age), upper(username)
+        from
+            users
+ "#;
+
+    let mut state = NullableState::new(query, source);
+    let nullable = state.get_nullable();
+    println!("{:?}", nullable);
+    assert!(nullable == [true, false])
+}
+
+#[test]
+pub fn select_func3() {
+    let source = Source::empty();
+
+    let query = r#"
+        select
+            coalesce(null, 1),
+            coalesce(null),
+            coalesce()
+ "#;
+
+    let mut state = NullableState::new(query, source);
+    let nullable = state.get_nullable();
+    println!("{:?}", nullable);
+    assert!(nullable == [false, true, true])
+}
+
+#[test]
+pub fn basic_left_join_func1() {
+    let user_table = Table::new("users")
+        .push_column("id", false)
+        .push_column("username", false)
+        .push_column("emailadres", true)
+        .push_column("pet_id", false);
+
+    let pets_table = Table::new("pets")
+        .push_column("pet_id", false)
+        .push_column("pet_name", false)
+        .push_column("age", false);
+
+    let source = Source::new(vec![user_table, pets_table]);
+
+    let query = r#"
+        select
+            users.id,
+            users.username,
+            users.emailadres,
+            pets.pet_id,
+            pets.pet_name,
+            avg(pets.age)
+        from
+            users
+        inner join
+            pets
+        on
+            pets.pet_id = users.pet_id
+ "#;
+
+    let mut state = NullableState::new(query, source);
+    let nullable = state.get_nullable();
+    println!("{:?}", nullable);
+    assert!(nullable == [false, false, true, false, false, false])
+}
+
+#[test]
+pub fn basic_right_join_func1() {
+    let user_table = Table::new("users")
+        .push_column("id", false)
+        .push_column("username", false)
+        .push_column("emailadres", true)
+        .push_column("pet_id", false);
+
+    let pets_table = Table::new("pets")
+        .push_column("pet_id", false)
+        .push_column("pet_name", false)
+        .push_column("age", false);
+
+    let source = Source::new(vec![user_table, pets_table]);
+
+    let query = r#"
+        select
+            users.id,
+            users.username,
+            users.emailadres,
+            pets.pet_id,
+            pets.pet_name,
+            avg(pets.age)
+        from
+            users
+        right join
+            pets
+        on
+            pets.pet_id = users.pet_id
+ "#;
+
+    let mut state = NullableState::new(query, source);
+    let nullable = state.get_nullable();
+    println!("{:?}", nullable);
+    assert!(nullable == [true, true, true, false, false, false])
+}
+
+#[test]
+pub fn double_right_join() {
+    let user_table = Table::new("users")
+        .push_column("id", false)
+        .push_column("name", false)
+        .push_column("pet_id", true)
+        .push_column("company_id", true);
+
+    let pets_table = Table::new("pets")
+        .push_column("pet_id", false)
+        .push_column("pet_name", false);
+
+    let company_table = Table::new("company")
+        .push_column("id", false)
+        .push_column("name", false);
+
+    let source = Source::new(vec![user_table, pets_table, company_table]);
+
+    let query = r#"
+        select
+            users.id,
+            users.name,
+            company.id,
+            company.name,
+            pets.pet_id,
+            pets.pet_name
+        from
+            users
+        inner join
+            pets
+        on
+            pets.pet_id = users.pet_id
+        right join
+            company
+        on
+            company.id = users.company_id
+
+ "#;
+
+    let mut state = NullableState::new(query, source);
+    let nullable = state.get_nullable();
+    println!("{:?}", nullable);
+    assert!(nullable == [true, true, false, false, true, true])
+}

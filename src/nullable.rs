@@ -27,7 +27,6 @@ impl StatementNullable {
 
 
     pub fn get_nullable(mut self) -> Vec<bool> {
-        println!("{:?}", self.0);
         let mut inferred_nullable: Vec<bool> = self
             .0
             .pop()
