@@ -1,7 +1,7 @@
 use mylib::{NullableState, Source, SqlFlavour, Table};
 
 #[test]
-pub fn func1() {
+pub fn one() {
     let orders_table = Table::new("vote")
         .push_column("id", false)
         .push_column("user_id", false);
@@ -18,4 +18,94 @@ pub fn func1() {
     let nullable = state.get_nullable();
     println!("{:?}", nullable);
     assert!(nullable == [false, false])
+}
+
+#[test]
+pub fn issue_2796() {
+    let foo_table = Table::new("foo")
+        .push_column("id", false)
+        .push_column("name", false);
+
+    let baz_table = Table::new("baz")
+        .push_column("id", false)
+        .push_column("name", false);
+
+    let bar_table = Table::new("bar")
+        .push_column("id", false)
+        .push_column("foo_id", false)
+        .push_column("baz_id", true)
+        .push_column("name", false);
+
+    let source = Source::new(vec![foo_table, baz_table, bar_table]);
+
+    let query = r#"
+        SELECT
+            foo.id,
+            foo.name,
+            bar.id AS "bar_id",
+            bar.name AS "bar_name",
+            baz.id AS "baz_id",
+            baz.name AS "baz_name"
+        FROM foo
+        LEFT JOIN bar ON bar.foo_id = foo.id
+        LEFT JOIN baz ON baz.id = bar.baz_id "#;
+
+    let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
+    let nullable = state.get_nullable();
+    println!("{:?}", nullable);
+    assert!(nullable == [false, false, true, true, true, true])
+}
+
+#[test]
+pub fn issue_367() {
+    let color_table = Table::new("colors")
+        .push_column("color_uuid", false)
+        .push_column("color", true);
+
+    let objects_table = Table::new("objects")
+        .push_column("object_uuid", false)
+        .push_column("colors", true);
+
+    let source = Source::new(vec![color_table, objects_table]);
+
+    let query = r#"
+    SELECT o.object_uuid, o.colors,
+    c1.color_uuid as color1_uuid, c1.color as color1_color,
+    c2.color_uuid as color2_uuid, c2.color as color2_color
+    FROM objects o
+    LEFT JOIN colors c1 ON c1.color_uuid = o.colors[1]
+    LEFT JOIN colors c2 ON c2.color_uuid = o.colors[2]
+    "#;
+
+    let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
+    let nullable = state.get_nullable();
+    println!("{:?}", nullable);
+    assert!(nullable == [false, true, true, true, true, true])
+}
+
+#[test]
+pub fn issue_367_2() {
+    let color_table = Table::new("colors")
+        .push_column("color_uuid", false)
+        .push_column("color", true);
+
+    let objects_table = Table::new("objects")
+        .push_column("object_uuid", false)
+        .push_column("colors", false);
+
+    let source = Source::new(vec![color_table, objects_table]);
+
+    let query = r#"
+    SELECT o.object_uuid, o.colors,
+    c1.color_uuid as color1_uuid, c1.color as color1_color,
+    c2.color_uuid as color2_uuid, c2.color as color2_color
+    FROM objects o
+    LEFT JOIN colors c1 ON c1.color_uuid = o.colors[1]
+    LEFT JOIN colors c2 ON c2.color_uuid = o.colors[2]
+    "#;
+
+    let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
+    let nullable = state.get_nullable();
+    println!("{:?}", nullable);
+    assert!(nullable == [false, false, true, true, true, true])
 }
