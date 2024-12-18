@@ -2,6 +2,14 @@
 pub struct Nullable(Vec<bool>);
 
 impl Nullable {
+    pub fn empty() -> Self {
+        Self::new(vec![])
+    }
+
+    pub fn add(&mut self, nullable: Option<bool>) {
+        self.0.push(nullable.unwrap_or(true));
+    }
+
     pub fn new(inner: Vec<bool>) -> Self {
         Self(inner)
     }
