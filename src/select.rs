@@ -3,7 +3,7 @@ use sqlparser::ast::{Select, SelectItem};
 use crate::{
     context::Context,
     expr::visit_expr,
-    nullable::{Nullable, NullableResult},
+    nullable::{Nullable, NullablePlace, NullableResult},
 };
 
 pub fn nullable_from_select(select: &Select, context: &mut Context) -> anyhow::Result<Nullable> {
@@ -20,18 +20,35 @@ pub fn nullable_from_select(select: &Select, context: &mut Context) -> anyhow::R
         .projection
         .iter()
         .map(|c| visit_select_item(c, context).unwrap())
+        .flatten()
         .collect();
+
+    dbg!(&n);
     Ok(Nullable::new(n))
 }
 
 pub fn visit_select_item(
     select_item: &SelectItem,
     context: &mut Context,
-) -> anyhow::Result<NullableResult> {
+) -> anyhow::Result<Vec<NullableResult>> {
     match select_item {
-        SelectItem::UnnamedExpr(expr) => visit_expr(&expr, None, context),
+        SelectItem::UnnamedExpr(expr) => Ok(vec![visit_expr(&expr, None, context)?]),
         SelectItem::ExprWithAlias { expr, alias } => {
-            visit_expr(&expr, Some(alias.clone()), context)
+            Ok(vec![visit_expr(&expr, Some(alias.clone()), context)?])
+        }
+        SelectItem::Wildcard(_wildcard) => {
+            let mut results = Vec::new();
+
+            for table in context.tables.iter() {
+                for column in table.columns.iter() {
+                    results.push(
+                        context
+                            .tables
+                            .nullable_for_ident(&[column.column_name.clone()])?,
+                    );
+                }
+            }
+            Ok(results)
         }
         _ => unimplemented!("{select_item:?}"),
     }

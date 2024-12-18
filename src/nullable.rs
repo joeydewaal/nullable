@@ -53,6 +53,10 @@ impl Nullable {
         self.0.push(nullable);
     }
 
+    pub fn append(&mut self, nullable: &mut Vec<NullableResult>) {
+        self.0.append(nullable);
+    }
+
     pub fn new(inner: Vec<NullableResult>) -> Self {
         Self(inner)
     }

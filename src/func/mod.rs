@@ -37,7 +37,7 @@ pub fn visit_func(func: &Function, context: &mut Context) -> anyhow::Result<Null
                 None
             }
         }
-        _ => unimplemented!(),
+        _ => unimplemented!("{func:?}"),
     };
 
     Ok(NullableResult::unnamed(inferred_nullable))

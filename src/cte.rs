@@ -13,6 +13,5 @@ pub fn visit_cte(cte: &Cte, context: &mut Context) -> Result<()> {
     }
 
     context.tables.push(table);
-
     Ok(())
 }

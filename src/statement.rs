@@ -28,7 +28,7 @@ pub fn nullable_from_statement(
             if let Some(returning) = returning {
                 context.add_active_tables(table);
                 for item in returning {
-                    nullable.add(visit_select_item(item, context)?);
+                    nullable.append(&mut visit_select_item(item, context)?);
                 }
             }
             Ok(nullable.into())
