@@ -28,7 +28,8 @@ pub fn func1() {
  "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable = state.get_nullable();
+    let nullable =
+        state.get_nullable(&["agenda_id", "startdate", "user_id", "?column?", "?column?"]);
     println!("{:?}", nullable);
     assert!(nullable == [false, false, false, false, false])
 }

@@ -14,7 +14,7 @@ pub fn basic_select1() {
     "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable = state.get_nullable();
+    let nullable = state.get_nullable(&["id", "username", "emailadres"]);
     println!("{:?}", nullable);
     assert!(nullable == [false, false, true])
 }
@@ -49,7 +49,7 @@ pub fn basic_left_join() {
  "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable = state.get_nullable();
+    let nullable = state.get_nullable(&["id", "username", "emailadres", "pet_id", "pet_name"]);
     println!("{:?}", nullable);
     assert!(nullable == [false, false, true, true, true])
 }
@@ -94,7 +94,14 @@ pub fn basic_double_left_join() {
  "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable = state.get_nullable();
+    let nullable = state.get_nullable(&[
+        "id",
+        "username",
+        "pet_id",
+        "pet_name",
+        "plant_id",
+        "plant_name",
+    ]);
     println!("{:?}", nullable);
     assert!(nullable == [false, false, true, true, true, true])
 }
@@ -139,7 +146,14 @@ pub fn basic_double_left_inner_join() {
  "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable = state.get_nullable();
+    let nullable = state.get_nullable(&[
+        "id",
+        "username",
+        "pet_id",
+        "pet_name",
+        "plant_id",
+        "plant_name",
+    ]);
     println!("{:?}", nullable);
     assert!(nullable == [false, false, true, true, true, true])
 }
@@ -184,7 +198,14 @@ pub fn basic_double_left_inner_join_1() {
  "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable = state.get_nullable();
+    let nullable = state.get_nullable(&[
+        "id",
+        "username",
+        "pet_id",
+        "pet_name",
+        "plant_id",
+        "plant_name",
+    ]);
     println!("{:?}", nullable);
     assert!(nullable == [false, false, true, true, true, true])
 }
@@ -228,7 +249,15 @@ pub fn basic_double_left_inner_join_2() {
  "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable = state.get_nullable();
+    let nullable = state.get_nullable(&[
+        "user_id",
+        "user_name",
+        "emailadres",
+        "order_id",
+        "order_date",
+        "product_name",
+        "price",
+    ]);
     println!("{:?}", nullable);
     assert!(nullable == [false, false, false, true, true, true, true])
 }
@@ -271,7 +300,15 @@ pub fn basic_double_left_inner_join_4() {
  "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable = state.get_nullable();
+    let nullable = state.get_nullable(&[
+        "agenda_id",
+        "startdate",
+        "user_id",
+        "name",
+        "emailadres",
+        "location_id",
+        "street_name",
+    ]);
     println!("{:?}", nullable);
     assert!(nullable == [false, false, true, true, true, true, true])
 }
@@ -314,7 +351,15 @@ pub fn basic_double_left_inner_join_5() {
  "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable = state.get_nullable();
+    let nullable = state.get_nullable(&[
+        "agenda_id",
+        "startdate",
+        "user_id",
+        "name",
+        "emailadres",
+        "location_id",
+        "street_name",
+    ]);
     println!("{:?}", nullable);
     assert!(nullable == [false, false, true, true, true, false, false])
 }
@@ -356,7 +401,15 @@ pub fn basic_double_left_inner_join_6() {
  "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable = state.get_nullable();
+    let nullable = state.get_nullable(&[
+        "agenda_id",
+        "startdate",
+        "user_id",
+        "name",
+        "emailadres",
+        "location_id",
+        "street_name",
+    ]);
     println!("{:?}", nullable);
     assert!(nullable == [false, false, false, false, true, false, false])
 }
@@ -378,7 +431,7 @@ pub fn select_count1() {
  "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable = state.get_nullable();
+    let nullable = state.get_nullable(&["user_count"]);
     println!("{:?}", nullable);
     assert!(nullable == [false])
 }
@@ -393,7 +446,7 @@ pub fn select_cast3() {
  "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable = state.get_nullable();
+    let nullable = state.get_nullable(&["nullable"]);
     println!("{:?}", nullable);
     assert!(nullable == [true])
 }

@@ -23,7 +23,7 @@ impl NullableState {
         }
     }
 
-    pub fn get_nullable(&mut self) -> Vec<bool> {
+    pub fn get_nullable(&mut self, cols: &[&str]) -> Vec<bool> {
         dbg!(&self.parsed_query);
         let s = self.parsed_query.first().unwrap();
 
@@ -31,6 +31,6 @@ impl NullableState {
 
         let inferred_nullable = nullable_from_statement(&s, &mut context).unwrap();
         println!("{:?}", self.started.elapsed());
-        inferred_nullable.get_nullable_final()
+        inferred_nullable.get_nullable_final(cols)
     }
 }

@@ -15,7 +15,10 @@ pub fn one() {
  "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Sqlite);
-    let nullable = state.get_nullable();
+    let nullable = state.get_nullable(&[
+        "id",
+        "votes"
+    ]);
     println!("{:?}", nullable);
     assert!(nullable == [false, false])
 }
@@ -51,7 +54,14 @@ pub fn issue_2796() {
         LEFT JOIN baz ON baz.id = bar.baz_id "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable = state.get_nullable();
+    let nullable = state.get_nullable(&[
+        "id",
+        "name",
+        "bar_id",
+        "bar_name",
+        "baz_id",
+        "baz_name",
+    ]);
     println!("{:?}", nullable);
     assert!(nullable == [false, false, true, true, true, true])
 }
@@ -78,7 +88,14 @@ pub fn issue_367() {
     "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable = state.get_nullable();
+    let nullable = state.get_nullable(&[
+        "object_uuid",
+        "colors",
+        "color1_uuid",
+        "color1_color",
+        "color2_uuid",
+        "color2_color",
+    ]);
     println!("{:?}", nullable);
     assert!(nullable == [false, true, true, true, true, true])
 }
@@ -105,7 +122,108 @@ pub fn issue_367_2() {
     "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable = state.get_nullable();
+    let nullable = state.get_nullable(&[
+        "object_uuid",
+        "colors",
+        "color1_uuid",
+        "color1_color",
+        "color2_uuid",
+        "color2_color",
+    ]);
     println!("{:?}", nullable);
     assert!(nullable == [false, false, true, true, true, true])
 }
+
+#[test]
+pub fn sqlx_issue_3202() {
+    let user_table = Table::new("songs")
+        .push_column("id", false)
+        .push_column("artist", false)
+        .push_column("title", false);
+
+    let pets_table = Table::new("top50")
+        .push_column("id", false)
+        .push_column("year", false)
+        .push_column("week", false)
+        .push_column("song_id", false)
+        .push_column("position", false);
+
+    let source = Source::new(vec![user_table, pets_table]);
+
+    let query = r#"
+        SELECT
+            this_week.week as cur_week,
+            this_week.position as cur_position,
+            prev_week.position as prev_position,
+            (prev_week.position - this_week.position) as delta,
+            songs.artist as artist,
+            songs.title as title
+        FROM
+            top50 AS this_week
+        INNER JOIN
+            songs ON songs.id=this_week.song_id
+        LEFT OUTER JOIN
+            top50 as prev_week ON prev_week.song_id=this_week.song_id AND prev_week.week = this_week.week - 1
+        WHERE this_week.week = 15
+        ORDER BY this_week.week, this_week.position
+ "#;
+
+    let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
+    let nullable = state.get_nullable(&[
+        "cur_week",
+        "cur_position",
+        "prev_position",
+        "delta",
+        "artist",
+        "title"
+    ]);
+    println!("{:?}", nullable);
+    assert!(nullable == [false, false, true, true, false, false])
+}
+
+#[test]
+pub fn sqlx_issue_3408() {
+    let department_table = Table::new("department")
+        .push_column("id", false)
+        .push_column("name", false);
+
+    let employee_table = Table::new("employee")
+        .push_column("name", false)
+        .push_column("department_id", true);
+
+    let source = Source::new(vec![department_table, employee_table]);
+
+    let query = r#"
+       select
+            employee.name as employee_name,
+            department.name as department_name
+       from employee
+       left join
+            department
+       on
+            employee.department_id = department.id
+            and employee.name = $1
+ "#;
+
+    let mut state = NullableState::new(query, source.clone(), SqlFlavour::Postgres);
+    let nullable = state.get_nullable(&["employee_name", "department_name"]);
+    println!("{:?}", nullable);
+    assert!(nullable == [false, true]);
+
+    let query = r#"
+        select
+            employee.name as employee_name,
+            department.name as department_name
+        from employee
+        left join
+            department
+            on employee.department_id = department.id
+        where employee.name = $1
+ "#;
+
+    let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
+    let nullable = state.get_nullable(&["employee_name", "department_name"]);
+    println!("{:?}", nullable);
+    assert!(nullable == [false, true]);
+}
+

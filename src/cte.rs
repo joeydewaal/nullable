@@ -4,11 +4,15 @@ use sqlparser::ast::Cte;
 use crate::{context::Context, query::nullable_from_query, Table};
 
 pub fn visit_cte(cte: &Cte, context: &mut Context) -> Result<()> {
-    let mut table = Table::new(cte.alias.name.value.clone());
+    let table = Table::new(&cte.alias.name.value);
 
-    let x = nullable_from_query(&cte.query, context)?;
+    let nullable = nullable_from_query(&cte.query, context)?.flatten();
 
-    dbg!(&x);
+    for _row in nullable.into_iter() {
+
+    }
+
+    context.tables.push(table);
 
     Ok(())
 }

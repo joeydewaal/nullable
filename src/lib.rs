@@ -13,6 +13,7 @@ use sqlparser::dialect::{Dialect, PostgreSqlDialect, SQLiteDialect};
 pub use state::NullableState;
 pub use table::*;
 
+#[derive(Debug, Clone, Copy)]
 pub enum SqlFlavour {
     Postgres,
     Sqlite,

@@ -41,20 +41,6 @@ impl Context {
                 let mut table = self.source.find_by_original_name(&name.0).unwrap();
                 table.add_alias(alias.as_ref().map(|alias| &alias.name));
                 self.tables.push(table);
-
-                // for ident in name.0.iter() {
-                //     let mut table = self
-                //         .source
-                //         .find_table(&ident.value)
-                //         .cloned()
-                //         .expect("Could not find table in active tables");
-
-                //     if let Some(alias) = alias {
-                //         table.alias = Some(alias.name.value.clone());
-                //     }
-
-                //     self.tables.push(table);
-                // }
             }
             _ => (),
         }
@@ -110,7 +96,10 @@ impl Context {
                                     println!("joined on base table");
 
                                     if base_table.table_nullable == Some(true) {
-                                        println!("base table: {:?} nullable", base_table.table_name);
+                                        println!(
+                                            "base table: {:?} nullable",
+                                            base_table.table_name
+                                        );
                                     }
                                     let mut right_nullable = vec![None; right_table.len()];
                                     right_nullable[index] = Some(false);
@@ -237,7 +226,7 @@ impl Context {
 
     pub fn add_with(&mut self, with: &With) {
         for cte in &with.cte_tables {
-            visit_cte(cte, self);
+            let _ = visit_cte(cte, self);
         }
     }
 }
