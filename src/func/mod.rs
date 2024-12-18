@@ -3,11 +3,7 @@ use sqlparser::ast::{
     Function, FunctionArg, FunctionArgExpr, FunctionArgumentList, FunctionArguments, ObjectName,
 };
 
-use crate::{
-    context::Context,
-    expr::visit_expr,
-    nullable::{NullablePlace, NullableResult},
-};
+use crate::{context::Context, expr::visit_expr, nullable::NullableResult};
 
 pub fn visit_func(func: &Function, context: &mut Context) -> anyhow::Result<NullableResult> {
     let function_name = func_name(&func.name)?;
@@ -18,32 +14,25 @@ pub fn visit_func(func: &Function, context: &mut Context) -> anyhow::Result<Null
             let nullables = args_nullables(&func.args, context)?;
 
             if nullables.len() > 0 && nullables.iter().all(|n| *n == Some(false)) {
-                return Ok(NullableResult {
-                    place: NullablePlace::Indexed { index: 0 },
-                    value: Some(false),
-                });
+                Some(false)
+            } else {
+                None
             }
-            None
         }
         "coalesce" => {
             let nullables = args_nullables(&func.args, context)?;
 
             if !nullables.is_empty() && nullables.iter().any(|n| *n == Some(false)) {
-                return Ok(NullableResult {
-                    place: NullablePlace::Indexed { index: 0 },
-                    value: Some(false),
-                });
+                Some(false)
+            } else {
+                None
             }
-            None
         }
         "array_agg" | "array_remove" => {
             let nullables = args_nullables(&func.args, context)?;
 
             if !nullables.is_empty() {
-                return Ok(NullableResult {
-                    place: NullablePlace::Indexed { index: 0 },
-                    value: Some(false),
-                });
+                Some(false)
             } else {
                 None
             }
@@ -51,10 +40,7 @@ pub fn visit_func(func: &Function, context: &mut Context) -> anyhow::Result<Null
         _ => unimplemented!(),
     };
 
-    Ok(NullableResult {
-        place: NullablePlace::Indexed { index: 0 },
-        value: inferred_nullable,
-    })
+    Ok(NullableResult::unnamed(inferred_nullable))
 }
 
 fn args_nullables(

@@ -3,7 +3,6 @@ use sqlparser::ast::Ident;
 #[derive(Debug)]
 pub enum NullablePlace {
     Named { name: Vec<Ident> },
-    Indexed { index: usize },
     Unnamed,
 }
 
