@@ -26,9 +26,9 @@ pub fn nullable_from_statement(
             let mut nullable = Nullable::empty();
 
             if let Some(returning) = returning {
-                context.visit_join_active_table(table);
+                context.add_active_tables(table);
                 for item in returning {
-                    nullable.add(visit_select_item(item, context));
+                    nullable.add(visit_select_item(item, context)?);
                 }
             }
             Ok(nullable.into())

@@ -1,5 +1,8 @@
+use anyhow::anyhow;
 use sqlparser::ast::{Expr, Ident, TableFactor};
 use std::{fmt::Debug, slice::Iter};
+
+use crate::nullable::NullableResult;
 
 #[derive(Debug, Clone)]
 pub struct Source {
@@ -11,12 +14,19 @@ impl Source {
         Source { tables }
     }
 
-    pub fn find_table(&self, table_name: &str) -> Option<&Table> {
-        self.tables.iter().find(|t| t.table_name == table_name)
-    }
+    // pub fn find_table(&self, table_name: &str) -> Option<&Table> {
+    //     self.tables.iter().find(|t| t.table_name == table_name)
+    // }
 
     pub fn empty() -> Self {
         Self { tables: Vec::new() }
+    }
+
+    pub fn find_by_original_name(&self, name: &[Ident]) -> Option<Table> {
+        self.tables
+            .iter()
+            .find(|t| t.original_name == name)
+            .cloned()
     }
 }
 
@@ -77,98 +87,123 @@ impl Tables {
         &self,
         col_name: &str,
         table_name: Option<&str>,
-    ) -> Option<(TableColumn, &Table)> {
-        let find_col = |table: &Table| {
-            table
-                .columns
-                .iter()
-                .find(move |c| c.column_name == col_name)
-                .cloned()
-        };
+    ) -> anyhow::Result<(TableColumn, &Table)> {
+        todo!()
+        // let find_col = |table: &Table| {
+        //     table
+        //         .columns
+        //         .iter()
+        //         .find(move |c| c.column_name == col_name)
+        //         .cloned()
+        // };
 
-        if let Some(table_name) = table_name {
-            let opt_table = self.0.iter().find(|table| table.table_name == table_name);
+        // if let Some(table_name) = table_name {
+        //     let opt_table = self.0.iter().find(|table| table.table_name == table_name);
 
-            return opt_table.map(|t| (find_col(&t).unwrap(), t));
-        }
-        let mut iterator = self.0.iter().filter(|table| {
-            table
-                .columns
-                .iter()
-                .find(|col| col.column_name == col_name)
-                .is_some()
-        });
+        //     return opt_table
+        //         .map(|t| (find_col(&t).unwrap(), t))
+        //         .ok_or(anyhow!("Not found"));
+        // }
+        // let mut iterator = self.0.iter().filter(|table| {
+        //     table
+        //         .columns
+        //         .iter()
+        //         .find(|col| col.column_name == col_name)
+        //         .is_some()
+        // });
 
-        let opt_table = iterator.next();
-        assert!(iterator.next().is_none());
-        return opt_table.map(|t| (find_col(&t).unwrap(), t));
+        // let opt_table = iterator.next();
+        // assert!(iterator.next().is_none());
+        // return opt_table
+        //     .map(|t| (find_col(&t).unwrap(), t))
+        //     .ok_or(anyhow!("Not found"));
     }
 
-    pub fn find_table_by_alias(
-        &self,
-        col_name: &str,
-        alias: &String,
-    ) -> Option<(TableColumn, &Table)> {
-        if let Some(table) = self.0.iter().find(|t| t.alias.as_deref() == Some(alias)) {
-            if let Some(col) = table.columns.iter().find(|c| c.column_name == col_name) {
-                return Some((col.clone(), table));
-            }
-        };
-        None
-    }
+    // pub fn find_table_by_alias(
+    //     &self,
+    //     col_name: &str,
+    //     alias: &String,
+    // ) -> anyhow::Result<(TableColumn, &Table)> {
+    //     if let Some(table) = self.0.iter().find(|t| t.alias.as_deref() == Some(alias)) {
+    //         if let Some(col) = table.columns.iter().find(|c| c.column_name == col_name) {
+    //             return Ok((col.clone(), table));
+    //         }
+    //     };
+    //     Err(anyhow!("error"))
+    // }
 
     pub fn find_table_by_idents_table(&self, name: &[Ident]) -> Option<&Table> {
-        let table_name = name.first()?;
-
-        self.0.iter().find(|t| t.table_name == table_name.value)
+        self.0.iter().find(|t| t.table_name == name)
     }
 
-    pub fn nullable_for_ident(&self, name: &[Ident]) -> Option<bool> {
-        let (col, table) = self.find_table_by_idents(name)?;
+    pub fn nullable_for_ident(&self, name: &[Ident]) -> anyhow::Result<NullableResult> {
+        let (col, table) = self.find_col_by_idents(name)?;
 
         if col.inferred_nullable.is_some() {
-            return col.inferred_nullable;
+            return Ok(NullableResult::named(col.inferred_nullable, name));
         }
 
         if table.table_nullable == Some(true) {
-            return Some(true);
+            return Ok(NullableResult::named(Some(true), name));
         } else {
-            return Some(col.get_nullable());
+            return Ok(NullableResult::named(Some(col.get_nullable()), name));
         }
     }
 
-    pub fn find_table_by_idents(&self, name: &[Ident]) -> Option<(TableColumn, &Table)> {
-        let (col_name, table_name): (&str, Option<&String>) = {
-            let first = name.first()?;
-            let second = name.get(1);
-
-            if second.is_none() {
-                (&first.value, second.map(|c| &c.value))
-            } else {
-                (second.map(|c| &c.value)?, Some(&first.value))
-            }
-        };
-
-        if let Some(opt_alias) = table_name {
-            if let Some(x) = self.find_table(&col_name, table_name.map(|t| t.as_str())) {
-                return Some(x);
-            } else {
-                return self.find_table_by_alias(&col_name, opt_alias);
+    pub fn find_col_by_idents(&self, name: &[Ident]) -> anyhow::Result<(TableColumn, &Table)> {
+        // search for col
+        if name.len() == 1 {
+            for table in self.0.iter() {
+                for col in &table.columns {
+                    if col.column_name == name[0].value {
+                        return Ok((col.clone(), table));
+                    }
+                }
             }
         }
 
-        return self.find_table(&col_name, table_name.map(|t| t.as_str()));
+        // look for original name: `table_alias`.`col_name`
+        if let Some(table) = self
+            .0
+            .iter()
+            .find(|table| table.table_name == name[..name.len() - 1])
+        {
+            if let Some(col) = table
+                .columns
+                .iter()
+                .find(|column| column.column_name == name.last().unwrap().value)
+            {
+                return Ok((col.clone(), table));
+            }
+        }
+
+        // look for original name: `original_table_name`.`col_name`
+        if let Some(table) = self
+            .0
+            .iter()
+            .find(|table| table.original_name == name[..name.len() - 1])
+        {
+            if let Some(col) = table
+                .columns
+                .iter()
+                .find(|column| column.column_name == name.last().unwrap().value)
+            {
+                return Ok((col.clone(), table));
+            }
+        }
+
+        return Err(anyhow!("Not found"));
     }
 
     pub fn table_from_expr(
         &self,
         expr: &Expr,
         recursive_left: bool,
-    ) -> Option<(TableColumn, Table)> {
+    ) -> anyhow::Result<(TableColumn, Table)> {
         match &expr {
-            Expr::CompoundIdentifier(idents) => self
-                .find_table_by_idents(&idents)
-                .map(|t| (t.0, t.1.clone())),
+            Expr::CompoundIdentifier(idents) => {
+                self.find_col_by_idents(&idents).map(|t| (t.0, t.1.clone()))
+            }
             Expr::BinaryOp { left, op: _, right } => {
                 if recursive_left {
                     return self.table_from_expr(left, recursive_left);
@@ -176,18 +211,18 @@ impl Tables {
                     return self.table_from_expr(right, recursive_left);
                 }
             }
-            _ => None,
+            _ => Err(anyhow!("not found")),
         }
     }
 
     pub fn set_table_nullable(&mut self, table_id: TableId, nullable: bool) {
         for i in 0..self.len() {
             if table_id == self.0[i].table_id {
-                println!("Setting {} to {}", self.0[i].table_name, nullable);
+                println!("Setting {:?} to {}", self.0[i].table_name, nullable);
                 self.0[i].table_nullable = Some(nullable);
 
                 println!(
-                    "{} dependants {:?}",
+                    "{:?} dependants {:?}",
                     self.0[i].table_name,
                     self.0[i].dependants.iter().map(|t| t).collect::<Vec<_>>()
                 );
@@ -210,7 +245,7 @@ impl Tables {
                     return self
                         .0
                         .iter()
-                        .find(|t| t.alias.as_ref() == Some(&alias.name.value))
+                        .find(|t| t.table_name.as_ref() == [alias.name.clone()])
                         .cloned();
                 }
                 self.find_table_by_idents_table(&name.0).cloned()
@@ -224,30 +259,21 @@ impl Tables {
 pub struct Table {
     pub table_id: TableId,
     pub table_nullable: Option<bool>,
-    pub table_name: String,
-    pub alias: Option<String>,
+    pub original_name: Vec<Ident>,
+    pub table_name: Vec<Ident>,
     pub columns: Vec<TableColumn>,
     pub dependants: Vec<TableId>,
 }
 
 impl Table {
     pub fn new(table_name: impl Into<String>) -> Self {
+        let name = Ident::new(table_name);
         Self {
             table_id: TableId::new(0),
-            table_name: table_name.into(),
+            table_name: vec![name.clone()],
+            original_name: vec![name],
             columns: Vec::new(),
             table_nullable: None,
-            alias: None,
-            dependants: Vec::new(),
-        }
-    }
-    pub fn new_alias(table_name: impl Into<String>, alias: Option<String>) -> Self {
-        Self {
-            table_id: TableId::new(0),
-            table_name: table_name.into(),
-            columns: Vec::new(),
-            table_nullable: None,
-            alias,
             dependants: Vec::new(),
         }
     }
@@ -263,15 +289,17 @@ impl Table {
     }
 
     pub fn equals(&self, other: &Self) -> bool {
-        if self.alias.is_none() && other.alias.is_none() {
-            return self.table_name == other.table_name;
-        }
-
-        self.alias == other.alias && self.table_name == other.table_name
+        self.table_name == other.table_name
     }
 
     pub fn add_dependent(&mut self, other: &Self) {
         self.dependants.push(other.table_id)
+    }
+
+    pub fn add_alias(&mut self, alias: Option<&Ident>) {
+        if let Some(alias) = alias {
+            self.table_name = vec![alias.clone()];
+        }
     }
 }
 

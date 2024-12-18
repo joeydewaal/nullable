@@ -1,8 +1,10 @@
 use std::collections::HashSet;
 
-use sqlparser::ast::{Expr, JoinConstraint, JoinOperator, Select, TableFactor, TableWithJoins};
+use sqlparser::ast::{
+    Expr, JoinConstraint, JoinOperator, Select, TableFactor, TableWithJoins, With,
+};
 
-use crate::{expr::get_nullable_col, Source, Table, Tables};
+use crate::{cte::visit_cte, expr::get_nullable_col, Source, Table, Tables};
 
 pub struct Context {
     pub tables: Tables,
@@ -25,7 +27,7 @@ impl Context {
         Ok(())
     }
 
-    pub fn visit_join_active_table(&mut self, table: &TableWithJoins) {
+    pub fn add_active_tables(&mut self, table: &TableWithJoins) {
         self.visit_table_factor(&&table.relation);
         for join_table in &table.joins {
             self.visit_table_factor(&&join_table.relation);
@@ -35,19 +37,24 @@ impl Context {
     pub fn visit_table_factor(&mut self, table: &TableFactor) {
         match table {
             TableFactor::Table { name, alias, .. } => {
-                for ident in name.0.iter() {
-                    let mut table = self
-                        .source
-                        .find_table(&ident.value)
-                        .cloned()
-                        .expect("Could not find table in active tables");
+                println!("{:?} {:?}", name, alias);
+                let mut table = self.source.find_by_original_name(&name.0).unwrap();
+                table.add_alias(alias.as_ref().map(|alias| &alias.name));
+                self.tables.push(table);
 
-                    if let Some(alias) = alias {
-                        table.alias = Some(alias.name.value.clone());
-                    }
+                // for ident in name.0.iter() {
+                //     let mut table = self
+                //         .source
+                //         .find_table(&ident.value)
+                //         .cloned()
+                //         .expect("Could not find table in active tables");
 
-                    self.tables.push(table);
-                }
+                //     if let Some(alias) = alias {
+                //         table.alias = Some(alias.name.value.clone());
+                //     }
+
+                //     self.tables.push(table);
+                // }
             }
             _ => (),
         }
@@ -67,10 +74,10 @@ impl Context {
                             |left_table, right_table| {
                                 println!(
                                     "left joined {:?} on {:?}",
-                                    (&left_table.table_name, &left_table.alias),
+                                    (&left_table.table_name, &left_table.table_name),
                                     right_table
                                         .iter()
-                                        .map(|t| (t.table_name.clone(), t.alias.clone()))
+                                        .map(|t| (t.table_name.clone(), t.table_name.clone()))
                                         .collect::<Vec<_>>()
                                 );
                                 (Some(true), vec![None; right_table.len()])
@@ -84,10 +91,10 @@ impl Context {
                             |left_table, right_table| {
                                 println!(
                                     "inner joined {:?} on {:?}",
-                                    (&left_table.table_name, &left_table.alias),
+                                    (&left_table.table_name, &left_table.table_name),
                                     right_table
                                         .iter()
-                                        .map(|t| (t.table_name.clone(), t.alias.clone()))
+                                        .map(|t| (t.table_name.clone(), t.table_name.clone()))
                                         .collect::<Vec<_>>()
                                 );
 
@@ -103,7 +110,7 @@ impl Context {
                                     println!("joined on base table");
 
                                     if base_table.table_nullable == Some(true) {
-                                        println!("base table: {} nullable", base_table.table_name);
+                                        println!("base table: {:?} nullable", base_table.table_name);
                                     }
                                     let mut right_nullable = vec![None; right_table.len()];
                                     right_nullable[index] = Some(false);
@@ -125,10 +132,10 @@ impl Context {
                             |left_table, right_table| {
                                 println!(
                                     "right joined {:?} on {:?}",
-                                    (&left_table.table_name, &left_table.alias),
+                                    (&left_table.table_name, &left_table.table_name),
                                     right_table
                                         .iter()
-                                        .map(|t| (t.table_name.clone(), t.alias.clone()))
+                                        .map(|t| (t.table_name.clone(), t.table_name.clone()))
                                         .collect::<Vec<_>>()
                                 );
 
@@ -162,7 +169,7 @@ impl Context {
                         .tables
                         .0
                         .iter()
-                        .find(|t| t.alias.as_ref() == Some(&alias.name.value))
+                        .find(|t| t.table_name == &[alias.name.clone()])
                         .cloned();
                 }
                 self.tables.find_table_by_idents_table(&name.0).cloned()
@@ -215,7 +222,8 @@ impl Context {
     pub fn recursive_find_joined_tables(&self, expr: &Expr, tables: &mut HashSet<Table>) {
         match expr {
             Expr::CompoundIdentifier(idents) => {
-                let table = self.tables.find_table_by_idents(&idents).unwrap();
+                println!("`{idents:?}`");
+                let table = self.tables.find_col_by_idents(&idents).unwrap();
 
                 tables.insert(table.1.clone());
             }
@@ -224,6 +232,12 @@ impl Context {
                 self.recursive_find_joined_tables(&right, tables);
             }
             _ => (),
+        }
+    }
+
+    pub fn add_with(&mut self, with: &With) {
+        for cte in &with.cte_tables {
+            visit_cte(cte, self);
         }
     }
 }

@@ -2,7 +2,9 @@ use std::time::Instant;
 
 use sqlparser::{ast::Statement, parser::Parser};
 
-use crate::{context::Context, statement::nullable_from_statement, table::Source, SqlFlavour, Tables};
+use crate::{
+    context::Context, statement::nullable_from_statement, table::Source, SqlFlavour, Tables,
+};
 
 pub struct NullableState {
     parsed_query: Vec<Statement>,
@@ -29,6 +31,6 @@ impl NullableState {
 
         let inferred_nullable = nullable_from_statement(&s, &mut context).unwrap();
         println!("{:?}", self.started.elapsed());
-        inferred_nullable.get_nullable()
+        inferred_nullable.get_nullable_final()
     }
 }

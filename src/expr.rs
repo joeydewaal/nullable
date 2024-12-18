@@ -1,9 +1,13 @@
 use anyhow::Context as _;
-use sqlparser::ast::{BinaryOperator, CastKind, Expr, SetExpr, SetOperator, Value};
+use sqlparser::ast::{BinaryOperator, CastKind, Expr, Ident, SetExpr, SetOperator, Value};
 
 use crate::{
-    context::Context, func::visit_func, nullable::StatementNullable, query::nullable_from_query,
-    select::nullable_from_select, TableColumn,
+    context::Context,
+    func::visit_func,
+    nullable::{NullablePlace, NullableResult, StatementNullable},
+    query::nullable_from_query,
+    select::nullable_from_select,
+    TableColumn,
 };
 
 pub fn nullable_from_expr(
@@ -27,22 +31,34 @@ pub fn nullable_from_expr(
     }
 }
 
-pub fn visit_expr(expr: &Expr, alias: Option<String>, context: &mut Context) -> Option<bool> {
+pub fn visit_expr(
+    expr: &Expr,
+    alias: Option<Ident>,
+    context: &mut Context,
+) -> anyhow::Result<NullableResult> {
     match expr {
-        Expr::CompoundIdentifier(idents) => context.tables.nullable_for_ident(&idents),
-        Expr::Identifier(col_name) => context.tables.nullable_for_ident(&[col_name.clone()]),
+        Expr::CompoundIdentifier(idents) => {
+            let value = context.tables.nullable_for_ident(&idents)?.set_alias(alias);
+            Ok(value)
+        }
+        Expr::Identifier(col_name) => {
+            let value = context
+                .tables
+                .nullable_for_ident(&[col_name.clone()])?
+                .set_alias(alias);
+            Ok(value)
+        }
         Expr::Function(func) => {
-            let o = visit_func(func, context);
-            dbg!(&o);
-            o
+            let o = visit_func(func, context)?.set_alias(alias);
+            Ok(o)
         }
         Expr::Exists {
             subquery: _,
             negated: _,
-        } => Some(false),
+        } => Ok(NullableResult::unnamed(Some(false))),
         Expr::Value(value) => match value {
-            Value::Null => Some(true),
-            _ => Some(false),
+            Value::Null => Ok(NullableResult::unnamed(Some(true)).set_alias(alias)),
+            _ => Ok(NullableResult::unnamed(Some(false)).set_alias(alias)),
         },
         Expr::Cast {
             kind: CastKind::DoubleColon,
@@ -50,28 +66,27 @@ pub fn visit_expr(expr: &Expr, alias: Option<String>, context: &mut Context) -> 
             data_type: _,
             format: _,
         } => visit_expr(expr, alias, context),
-        Expr::Tuple(_tuple) => Some(false),
+        Expr::Tuple(_tuple) => Ok(NullableResult::unnamed(Some(false)).set_alias(alias)),
         Expr::Nested(nested) => visit_expr(&nested, alias, context),
         Expr::BinaryOp { left, op: _, right } => {
-            let left_nullable = visit_expr(&left, alias.clone(), context);
-            let right_nullable = visit_expr(&right, alias, context);
+            let left_nullable = visit_expr(&left, alias.clone(), context)?;
+            let right_nullable = visit_expr(&right, alias, context)?;
 
-            if left_nullable == Some(false) && right_nullable == Some(false) {
-                return Some(false);
-            } else if left_nullable == Some(true) || right_nullable == Some(true) {
-                return Some(true);
+            if left_nullable.value == Some(false) && right_nullable.value == Some(false) {
+                return Ok(NullableResult::unnamed(Some(false)));
+            } else if left_nullable.value == Some(true) || right_nullable.value == Some(true) {
+                return Ok(NullableResult::unnamed(Some(true)));
             } else {
-                return None;
+                return Ok(NullableResult::unnamed(None));
             }
         }
-        Expr::IsNotNull(_) => None,
+        Expr::IsNotNull(_) => Ok(NullableResult::unnamed(None).set_alias(alias)),
         Expr::Subquery(query) => {
             dbg!(&query);
             let r = nullable_from_query(&query, context)
-                .map(|r| r.get_nullable().iter().any(|n| *n == true))
-                .unwrap();
+                .map(|r| r.get_nullable().iter().any(|n| *n == Some(true)))?;
             dbg!(&r);
-            Some(r)
+            Ok(NullableResult::unnamed(Some(r)).set_alias(alias))
         }
         _ => unimplemented!("{:?}", expr),
     }
@@ -95,7 +110,7 @@ pub fn get_nullable_col(
             println!("right: {:?}", visit_expr(&right, None, context));
             if let (Some(left_col), Some(false)) = (
                 get_column(&left, context)?,
-                visit_expr(&right, None, context),
+                visit_expr(&right, None, context)?.value,
             ) {
                 x.push((left_col, Some(false), Some(false)));
             }
@@ -104,7 +119,7 @@ pub fn get_nullable_col(
             println!("left:  {:?}", visit_expr(&left, None, context));
             if let (Some(right_col), Some(false)) = (
                 get_column(&right, context)?,
-                visit_expr(&left, None, context),
+                visit_expr(&left, None, context)?.value,
             ) {
                 x.push((right_col, Some(false), Some(false)));
             }
@@ -133,14 +148,14 @@ fn get_column(expr: &Expr, context: &mut Context) -> anyhow::Result<Option<Table
         Expr::CompoundIdentifier(idents) => {
             let (col, _table) = context
                 .tables
-                .find_table_by_idents(&idents)
+                .find_col_by_idents(&idents)
                 .context(format!("table not found: {expr:?}"))?;
             Ok(Some(col))
         }
         Expr::Identifier(ident) => {
             let (col, _table) = context
                 .tables
-                .find_table_by_idents(&[ident.clone()])
+                .find_col_by_idents(&[ident.clone()])
                 .context(format!("table not found: {expr:?}"))?;
             Ok(Some(col))
         }
