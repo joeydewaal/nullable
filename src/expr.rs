@@ -4,7 +4,7 @@ use sqlparser::ast::{BinaryOperator, CastKind, Expr, Ident, SetExpr, SetOperator
 use crate::{
     context::Context,
     func::visit_func,
-    nullable::{NullablePlace, NullableResult, StatementNullable},
+    nullable::{NullableResult, StatementNullable},
     query::nullable_from_query,
     select::nullable_from_select,
     TableColumn,

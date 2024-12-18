@@ -1,4 +1,4 @@
-use sqlparser::ast::{Ident, Query};
+use sqlparser::ast::Query;
 
 use crate::{context::Context, expr::nullable_from_expr, nullable::StatementNullable};
 

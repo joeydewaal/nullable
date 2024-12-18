@@ -14,10 +14,6 @@ impl Source {
         Source { tables }
     }
 
-    // pub fn find_table(&self, table_name: &str) -> Option<&Table> {
-    //     self.tables.iter().find(|t| t.table_name == table_name)
-    // }
-
     pub fn empty() -> Self {
         Self { tables: Vec::new() }
     }
@@ -45,7 +41,6 @@ impl Tables {
                     t.table_nullable = nullable_table;
                     for column in t.columns.iter_mut() {
                         if column.column_id == col.column_id {
-                            // println!("{}:{:?}", column.column_name, nullable);
                             column.inferred_nullable = nullable_column
                         }
                     }
@@ -83,55 +78,6 @@ impl Tables {
         self.0.push(table)
     }
 
-    pub fn find_table(
-        &self,
-        col_name: &str,
-        table_name: Option<&str>,
-    ) -> anyhow::Result<(TableColumn, &Table)> {
-        todo!()
-        // let find_col = |table: &Table| {
-        //     table
-        //         .columns
-        //         .iter()
-        //         .find(move |c| c.column_name == col_name)
-        //         .cloned()
-        // };
-
-        // if let Some(table_name) = table_name {
-        //     let opt_table = self.0.iter().find(|table| table.table_name == table_name);
-
-        //     return opt_table
-        //         .map(|t| (find_col(&t).unwrap(), t))
-        //         .ok_or(anyhow!("Not found"));
-        // }
-        // let mut iterator = self.0.iter().filter(|table| {
-        //     table
-        //         .columns
-        //         .iter()
-        //         .find(|col| col.column_name == col_name)
-        //         .is_some()
-        // });
-
-        // let opt_table = iterator.next();
-        // assert!(iterator.next().is_none());
-        // return opt_table
-        //     .map(|t| (find_col(&t).unwrap(), t))
-        //     .ok_or(anyhow!("Not found"));
-    }
-
-    // pub fn find_table_by_alias(
-    //     &self,
-    //     col_name: &str,
-    //     alias: &String,
-    // ) -> anyhow::Result<(TableColumn, &Table)> {
-    //     if let Some(table) = self.0.iter().find(|t| t.alias.as_deref() == Some(alias)) {
-    //         if let Some(col) = table.columns.iter().find(|c| c.column_name == col_name) {
-    //             return Ok((col.clone(), table));
-    //         }
-    //     };
-    //     Err(anyhow!("error"))
-    // }
-
     pub fn find_table_by_idents_table(&self, name: &[Ident]) -> Option<&Table> {
         self.0.iter().find(|t| t.table_name == name)
     }
@@ -155,7 +101,7 @@ impl Tables {
         if name.len() == 1 {
             for table in self.0.iter() {
                 for col in &table.columns {
-                    if col.column_name == name[0].value {
+                    if col.column_name == name[0] {
                         return Ok((col.clone(), table));
                     }
                 }
@@ -171,7 +117,7 @@ impl Tables {
             if let Some(col) = table
                 .columns
                 .iter()
-                .find(|column| column.column_name == name.last().unwrap().value)
+                .find(|column| Some(&column.column_name) == name.last())
             {
                 return Ok((col.clone(), table));
             }
@@ -186,7 +132,7 @@ impl Tables {
             if let Some(col) = table
                 .columns
                 .iter()
-                .find(|column| column.column_name == name.last().unwrap().value)
+                .find(|column| Some(&column.column_name) == name.last())
             {
                 return Ok((col.clone(), table));
             }
@@ -280,7 +226,7 @@ impl Table {
 
     pub fn push_column(mut self, column_name: impl Into<String>, catalog_nullable: bool) -> Self {
         self.columns.push(TableColumn::new(
-            column_name,
+            Ident::new(column_name),
             catalog_nullable,
             self.table_id,
             ColumnId::new(self.columns.len()),
@@ -305,7 +251,7 @@ impl Table {
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub struct TableColumn {
-    pub column_name: String,
+    pub column_name: Ident,
     pub catalog_nullable: bool,
     pub inferred_nullable: Option<bool>,
 
@@ -333,7 +279,7 @@ impl ColumnId {
 
 impl TableColumn {
     pub fn new(
-        column_name: impl Into<String>,
+        column_name: Ident,
         catalog_nullable: bool,
         table_id: TableId,
         column_id: ColumnId,
@@ -341,7 +287,7 @@ impl TableColumn {
         Self {
             table_id,
             column_id,
-            column_name: column_name.into(),
+            column_name,
             catalog_nullable,
             inferred_nullable: None,
         }
