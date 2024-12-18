@@ -1,11 +1,13 @@
 use sqlparser::ast::Statement;
 
-use crate::{nullable::StatementNullable, query::nullable_from_query, Source};
+use crate::{context::Context, nullable::StatementNullable, query::nullable_from_query};
 
-pub fn nullable_from_statement(statement: &Statement, source: &Source) -> StatementNullable {
+pub fn nullable_from_statement(
+    statement: &Statement,
+    context: &mut Context,
+) -> anyhow::Result<StatementNullable> {
     match statement {
-        Statement::Query(query) => nullable_from_query(query, source),
-        _ => Default::default(),
+        Statement::Query(query) => nullable_from_query(query, context),
+        _ => unimplemented!("{statement:?}"),
     }
 }
-

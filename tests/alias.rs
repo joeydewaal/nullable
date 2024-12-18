@@ -1,4 +1,4 @@
-use mylib::{NullableState, Source, Table};
+use mylib::{NullableState, Source, SqlFlavour, Table};
 
 #[test]
 pub fn basic_select1() {
@@ -13,7 +13,7 @@ pub fn basic_select1() {
         select u.id, u.username, emailadres from users as u
     "#;
 
-    let mut state = NullableState::new(query, source);
+    let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
     let nullable = state.get_nullable();
     println!("{:?}", nullable);
     assert!(nullable == [false, false, true])
@@ -48,7 +48,7 @@ pub fn basic_left_join() {
             pets.pet_id = u.pet_id
  "#;
 
-    let mut state = NullableState::new(query, source);
+    let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
     let nullable = state.get_nullable();
     println!("{:?}", nullable);
     assert!(nullable == [false, false, true, true, true])
@@ -93,7 +93,7 @@ pub fn basic_double_left_join() {
             plants.plant_id = users.plant_id
  "#;
 
-    let mut state = NullableState::new(query, source);
+    let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
     let nullable = state.get_nullable();
     println!("{:?}", nullable);
     assert!(nullable == [false, false, true, true, true, true])
@@ -138,7 +138,7 @@ pub fn basic_double_left_inner_join() {
             plants.plant_id = pets.plant_id
  "#;
 
-    let mut state = NullableState::new(query, source);
+    let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
     let nullable = state.get_nullable();
     println!("{:?}", nullable);
     assert!(nullable == [false, false, true, true, true, true])
@@ -183,7 +183,7 @@ pub fn basic_double_left_inner_join_1() {
             plants.plant_id = pets.plant_id
  "#;
 
-    let mut state = NullableState::new(query, source);
+    let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
     let nullable = state.get_nullable();
     println!("{:?}", nullable);
     assert!(nullable == [false, false, true, true, true, true])
@@ -227,7 +227,7 @@ pub fn basic_double_left_inner_join_2() {
 
  "#;
 
-    let mut state = NullableState::new(query, source);
+    let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
     let nullable = state.get_nullable();
     println!("{:?}", nullable);
     assert!(nullable == [false, false, false, true, true, true, true])
@@ -270,7 +270,7 @@ pub fn basic_double_left_inner_join_4() {
 
  "#;
 
-    let mut state = NullableState::new(query, source);
+    let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
     let nullable = state.get_nullable();
     println!("{:?}", nullable);
     assert!(nullable == [false, false, true, true, true, true, true])
@@ -313,7 +313,7 @@ pub fn basic_double_left_inner_join_5() {
 
  "#;
 
-    let mut state = NullableState::new(query, source);
+    let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
     let nullable = state.get_nullable();
     println!("{:?}", nullable);
     assert!(nullable == [false, false, true, true, true, false, false])
@@ -355,7 +355,7 @@ pub fn basic_double_left_inner_join_6() {
             location l on a.location_id = l.location_id
  "#;
 
-    let mut state = NullableState::new(query, source);
+    let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
     let nullable = state.get_nullable();
     println!("{:?}", nullable);
     assert!(nullable == [false, false, false, false, true, false, false])
@@ -377,7 +377,7 @@ pub fn select_count1() {
             users
  "#;
 
-    let mut state = NullableState::new(query, source);
+    let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
     let nullable = state.get_nullable();
     println!("{:?}", nullable);
     assert!(nullable == [false])
@@ -392,7 +392,7 @@ pub fn select_cast3() {
 
  "#;
 
-    let mut state = NullableState::new(query, source);
+    let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
     let nullable = state.get_nullable();
     println!("{:?}", nullable);
     assert!(nullable == [true])

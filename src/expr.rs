@@ -1,13 +1,17 @@
-use sqlparser::ast::{CastKind, Expr, SetExpr, SetOperator, Value};
+use anyhow::Context as _;
+use sqlparser::ast::{BinaryOperator, CastKind, Expr, SetExpr, SetOperator, Value};
 
 use crate::{
-    func::visit_func, nullable::StatementNullable, select::nullable_from_select, Source,
-    Tables,
+    context::Context, func::visit_func, nullable::StatementNullable, query::nullable_from_query,
+    select::nullable_from_select, TableColumn,
 };
 
-pub fn nullable_from_expr(expr: &SetExpr, source: &Source) -> StatementNullable {
+pub fn nullable_from_expr(
+    expr: &SetExpr,
+    context: &mut Context,
+) -> anyhow::Result<StatementNullable> {
     match expr {
-        SetExpr::Select(ref select) => nullable_from_select(select, source).into(),
+        SetExpr::Select(ref select) => nullable_from_select(select, context).map(|x| x.into()),
         SetExpr::SetOperation {
             op: SetOperator::Union,
             set_quantifier: _,
@@ -15,19 +19,23 @@ pub fn nullable_from_expr(expr: &SetExpr, source: &Source) -> StatementNullable 
             right,
         } => {
             let mut nullable = StatementNullable::new();
-            nullable.combine(nullable_from_expr(&left, source));
-            nullable.combine(nullable_from_expr(&right, source));
-            nullable
+            nullable.combine(nullable_from_expr(&left, context)?);
+            nullable.combine(nullable_from_expr(&right, context)?);
+            Ok(nullable)
         }
-        _ => StatementNullable::new(),
+        _ => unimplemented!("{expr:?}"),
     }
 }
 
-pub fn visit_expr(expr: &Expr, alias: Option<String>, tables: &Tables) -> Option<bool> {
+pub fn visit_expr(expr: &Expr, alias: Option<String>, context: &mut Context) -> Option<bool> {
     match expr {
-        Expr::CompoundIdentifier(idents) => tables.nullable_for_ident(&idents),
-        Expr::Identifier(col_name) => tables.nullable_for_ident(&[col_name.clone()]),
-        Expr::Function(func) => visit_func(func, tables),
+        Expr::CompoundIdentifier(idents) => context.tables.nullable_for_ident(&idents),
+        Expr::Identifier(col_name) => context.tables.nullable_for_ident(&[col_name.clone()]),
+        Expr::Function(func) => {
+            let o = visit_func(func, context);
+            dbg!(&o);
+            o
+        }
         Expr::Exists {
             subquery: _,
             negated: _,
@@ -41,7 +49,101 @@ pub fn visit_expr(expr: &Expr, alias: Option<String>, tables: &Tables) -> Option
             expr,
             data_type: _,
             format: _,
-        } => visit_expr(expr, alias, tables),
-        _ => None,
+        } => visit_expr(expr, alias, context),
+        Expr::Tuple(_tuple) => Some(false),
+        Expr::Nested(nested) => visit_expr(&nested, alias, context),
+        Expr::BinaryOp { left, op: _, right } => {
+            let left_nullable = visit_expr(&left, alias.clone(), context);
+            let right_nullable = visit_expr(&right, alias, context);
+
+            if left_nullable == Some(false) && right_nullable == Some(false) {
+                return Some(false);
+            } else if left_nullable == Some(true) || right_nullable == Some(true) {
+                return Some(true);
+            } else {
+                return None;
+            }
+        }
+        Expr::IsNotNull(_) => None,
+        Expr::Subquery(query) => {
+            dbg!(&query);
+            let r = nullable_from_query(&query, context)
+                .map(|r| r.get_nullable().iter().any(|n| *n == true))
+                .unwrap();
+            dbg!(&r);
+            Some(r)
+        }
+        _ => unimplemented!("{:?}", expr),
+    }
+}
+
+pub fn get_nullable_col(
+    expr: &Expr,
+    context: &mut Context,
+) -> anyhow::Result<Vec<(TableColumn, Option<bool>, Option<bool>)>> {
+    match expr {
+        Expr::IsNotNull(not_null) => {
+            if let Some(column) = get_column(&not_null, context)? {
+                return Ok(vec![(column, Some(false), Some(false))]);
+            }
+            Ok(vec![])
+        }
+        Expr::BinaryOp { left, op, right } => {
+            let mut x = vec![];
+
+            println!("left_col:  {:?}", get_column(&left, context));
+            println!("right: {:?}", visit_expr(&right, None, context));
+            if let (Some(left_col), Some(false)) = (
+                get_column(&left, context)?,
+                visit_expr(&right, None, context),
+            ) {
+                x.push((left_col, Some(false), Some(false)));
+            }
+
+            println!("right_col:  {:?}", get_column(&right, context));
+            println!("left:  {:?}", visit_expr(&left, None, context));
+            if let (Some(right_col), Some(false)) = (
+                get_column(&right, context)?,
+                visit_expr(&left, None, context),
+            ) {
+                x.push((right_col, Some(false), Some(false)));
+            }
+
+            if *op != BinaryOperator::And {
+                return Ok(x);
+            }
+            let mut left = get_nullable_col(left, context)?;
+            let mut right = get_nullable_col(right, context)?;
+
+            x.append(&mut left);
+            x.append(&mut right);
+
+            dbg!(&x);
+            return Ok(x);
+        }
+        Expr::CompoundIdentifier(_) => Ok(vec![]),
+        Expr::Identifier(_ident) => Ok(vec![]),
+        Expr::Value(_) => Ok(vec![]),
+        _ => unimplemented!("{expr:?}"),
+    }
+}
+
+fn get_column(expr: &Expr, context: &mut Context) -> anyhow::Result<Option<TableColumn>> {
+    match expr {
+        Expr::CompoundIdentifier(idents) => {
+            let (col, _table) = context
+                .tables
+                .find_table_by_idents(&idents)
+                .context(format!("table not found: {expr:?}"))?;
+            Ok(Some(col))
+        }
+        Expr::Identifier(ident) => {
+            let (col, _table) = context
+                .tables
+                .find_table_by_idents(&[ident.clone()])
+                .context(format!("table not found: {expr:?}"))?;
+            Ok(Some(col))
+        }
+        _ => Ok(None),
     }
 }

@@ -1,7 +1,5 @@
-use sqlparser::ast::{
-    Expr, Ident, JoinConstraint, JoinOperator, Select, TableFactor, TableWithJoins,
-};
-use std::{collections::HashSet, ops::Deref};
+use sqlparser::ast::{Expr, Ident, TableFactor};
+use std::{fmt::Debug, slice::Iter};
 
 #[derive(Debug, Clone)]
 pub struct Source {
@@ -23,205 +21,56 @@ impl Source {
 }
 
 #[derive(Default, Debug, Clone)]
-pub struct Tables(Vec<Table>);
-
-impl Deref for Tables {
-    type Target = Vec<Table>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
+pub struct Tables(pub Vec<Table>);
 
 impl Tables {
     pub fn new() -> Self {
         Self::default()
     }
 
-    pub fn visit_join_active_table(&mut self, table: &TableWithJoins, source: &Source) {
-        self.visit_table_factor(&&table.relation, source);
-        for join_table in &table.joins {
-            self.visit_table_factor(&&join_table.relation, source);
+    pub fn apply(&mut self, data: Vec<(TableColumn, Option<bool>, Option<bool>)>) {
+        for (col, nullable_column, nullable_table) in data.into_iter() {
+            for t in self.0.iter_mut() {
+                if t.table_id == col.table_id {
+                    t.table_nullable = nullable_table;
+                    for column in t.columns.iter_mut() {
+                        if column.column_id == col.column_id {
+                            // println!("{}:{:?}", column.column_name, nullable);
+                            column.inferred_nullable = nullable_column
+                        }
+                    }
+                }
+            }
         }
     }
 
-    pub fn push(&mut self, table: Table) {
+    pub fn iter(&self) -> Iter<'_, Table> {
+        self.0.iter()
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn get_index(&self, other: &Table) -> Option<usize> {
+        self.0.iter().position(|t| t.equals(other))
+    }
+
+    pub fn push(&mut self, mut table: Table) {
         for cur_table in self.0.iter() {
             // don't insert duplicate tables
-            if cur_table == &table {
+            if cur_table.equals(&table) {
                 return;
             }
         }
 
+        table.table_id = TableId::new(self.0.len());
+
+        for col in table.columns.iter_mut() {
+            col.table_id = table.table_id
+        }
+
         self.0.push(table)
-    }
-
-    pub fn update_nullable_from_select(&mut self, select: &Select) {
-        for table in &select.from {
-            for join in &table.joins {
-                let left_table = self.find_table_by_table_factor(&join.relation).unwrap();
-
-                match &join.join_operator {
-                    JoinOperator::LeftOuter(inner) => {
-                        self.handle_join_constraint(
-                            &inner,
-                            &left_table,
-                            |left_table, right_table| {
-                                println!(
-                                    "{:?} left joined on {:?}",
-                                    (&left_table.table_name, &left_table.alias),
-                                    right_table
-                                        .iter()
-                                        .map(|t| (t.table_name.clone(), t.alias.clone()))
-                                        .collect::<Vec<_>>()
-                                );
-                                (Some(true), vec![None; right_table.len()])
-                            },
-                        );
-                    }
-                    JoinOperator::Inner(inner) => {
-                        self.handle_join_constraint(
-                            &inner,
-                            &left_table,
-                            |left_table, right_table| {
-                                println!(
-                                    "{:?} inner joined on {:?}",
-                                    (&left_table.table_name, &left_table.alias),
-                                    right_table
-                                        .iter()
-                                        .map(|t| (t.table_name.clone(), t.alias.clone()))
-                                        .collect::<Vec<_>>()
-                                );
-                                if right_table.iter().any(|t| t.table_nullable) {
-                                    (Some(true), vec![None; right_table.len()])
-                                } else {
-                                    (Some(false), vec![None; right_table.len()])
-                                }
-                            },
-                        );
-                    }
-                    JoinOperator::RightOuter(inner) => {
-                        self.handle_join_constraint(
-                            &inner,
-                            &left_table,
-                            |left_table, right_table| {
-                                println!(
-                                    "{:?} right joined on {:?}",
-                                    (&left_table.table_name, &left_table.alias),
-                                    right_table
-                                        .iter()
-                                        .map(|t| (t.table_name.clone(), t.alias.clone()))
-                                        .collect::<Vec<_>>()
-                                );
-
-                                (
-                                    Some(false),
-                                    right_table
-                                        .iter()
-                                        .map(|t| {
-                                            if t.equals(&left_table) {
-                                                None
-                                            } else {
-                                                Some(true)
-                                            }
-                                        })
-                                        .collect(),
-                                )
-                            },
-                        );
-                    }
-                    _ => (),
-                }
-            }
-        }
-    }
-
-    fn handle_join_constraint(
-        &mut self,
-        constraint: &JoinConstraint,
-        left_joined_table: &Table,
-        callback: impl Fn(&Table, &[Table]) -> (Option<bool>, Vec<Option<bool>>),
-    ) {
-        // println!("left_joined_col {:#?}", left_joined_table.table_name);
-        match &constraint {
-            JoinConstraint::On(expr) => {
-                let mut t = HashSet::new();
-                self.recursive_find_joined_tables(expr, &mut t);
-                let right_tables: Vec<Table> = t.into_iter().collect();
-
-                let left_table = right_tables
-                    .iter()
-                    .find(|table| table.equals(&left_joined_table))
-                    .unwrap();
-
-                for right_t in right_tables.iter() {
-                    for table in self.0.iter_mut() {
-                        if table.equals(right_t) && !left_table.equals(&right_t) {
-                            table.add_dependancy(&left_table)
-                        }
-                    }
-                }
-
-                let (nullable1, nullable2) = (callback)(&left_table, &right_tables);
-
-
-                for (nullable2, table) in nullable2.iter().zip(right_tables.clone()) {
-                    if let Some(null2) = nullable2 {
-                        self.set_table_nullable(&table, *null2);
-                        println!(
-                            "after: {:?} is {}",
-                            (&table.table_name, &table.alias),
-                            null2,
-                        );
-                    }
-                }
-                if let Some(null1) = nullable1 {
-                    self.set_table_nullable(&left_table, null1);
-                    println!(
-                        "after: {:?} is {}",
-                        (&left_table.table_name, &left_table.alias),
-                        null1,
-                    );
-                }
-
-            }
-            _ => (),
-        }
-    }
-
-    pub fn recursive_find_joined_tables(&self, expr: &Expr, tables: &mut HashSet<Table>) {
-        match expr {
-            Expr::CompoundIdentifier(idents) => {
-                let table = self.find_table_by_idents(&idents).unwrap();
-
-                tables.insert(table.1.clone());
-            }
-            Expr::BinaryOp { left, op: _, right } => {
-                self.recursive_find_joined_tables(&left, tables);
-                self.recursive_find_joined_tables(&right, tables);
-            }
-            _ => (),
-        }
-    }
-
-    pub fn visit_table_factor(&mut self, table: &TableFactor, sources: &Source) {
-        match table {
-            TableFactor::Table { name, alias, .. } => {
-                for ident in name.0.iter() {
-                    let mut table = sources
-                        .find_table(&ident.value)
-                        .cloned()
-                        .expect("Could not find table in active tables");
-
-                    if let Some(alias) = alias {
-                        table.alias = Some(alias.name.value.clone());
-                    }
-
-                    self.push(table);
-                }
-            }
-            _ => (),
-        }
     }
 
     pub fn find_table(
@@ -277,10 +126,14 @@ impl Tables {
     pub fn nullable_for_ident(&self, name: &[Ident]) -> Option<bool> {
         let (col, table) = self.find_table_by_idents(name)?;
 
-        if table.table_nullable {
+        if col.inferred_nullable.is_some() {
+            return col.inferred_nullable;
+        }
+
+        if table.table_nullable == Some(true) {
             return Some(true);
         } else {
-            return Some(col.catalog_nullable);
+            return Some(col.get_nullable());
         }
     }
 
@@ -327,29 +180,25 @@ impl Tables {
         }
     }
 
-    pub fn set_table_nullable(&mut self, table: &Table, nullable: bool) {
+    pub fn set_table_nullable(&mut self, table_id: TableId, nullable: bool) {
         for i in 0..self.len() {
-            if table.equals(&&self.0[i]) {
+            if table_id == self.0[i].table_id {
                 println!("Setting {} to {}", self.0[i].table_name, nullable);
-                self.0[i].table_nullable = nullable;
+                self.0[i].table_nullable = Some(nullable);
 
-                for y in 0..self.0[i].depends_on.len() {
-                    let b = self.0[i].depends_on[y].clone();
-                    self.set_table_nullable(&b, nullable)
+                println!(
+                    "{} dependants {:?}",
+                    self.0[i].table_name,
+                    self.0[i].dependants.iter().map(|t| t).collect::<Vec<_>>()
+                );
+
+                if nullable {
+                    for y in 0..self.0[i].dependants.len() {
+                        let b = self.0[i].dependants[y].clone();
+                        println!("recursive");
+                        self.set_table_nullable(b, nullable)
+                    }
                 }
-            }
-        }
-        for row in self.0.iter_mut() {
-            if table.equals(row) {
-                row.table_nullable = nullable;
-
-                // for dep in row.depends_on.iter() {
-                //     for row in self.0.iter_mut() {
-                //         if dep.equals(&row) {
-                //             row.table_nullable = nullable;
-                //         }
-                //     }
-                // }
             }
         }
     }
@@ -371,23 +220,35 @@ impl Tables {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub struct Table {
-    pub table_nullable: bool,
+    pub table_id: TableId,
+    pub table_nullable: Option<bool>,
     pub table_name: String,
     pub alias: Option<String>,
     pub columns: Vec<TableColumn>,
-    pub depends_on: Vec<Table>,
+    pub dependants: Vec<TableId>,
 }
 
 impl Table {
     pub fn new(table_name: impl Into<String>) -> Self {
         Self {
+            table_id: TableId::new(0),
             table_name: table_name.into(),
             columns: Vec::new(),
-            table_nullable: false,
+            table_nullable: None,
             alias: None,
-            depends_on: Vec::new(),
+            dependants: Vec::new(),
+        }
+    }
+    pub fn new_alias(table_name: impl Into<String>, alias: Option<String>) -> Self {
+        Self {
+            table_id: TableId::new(0),
+            table_name: table_name.into(),
+            columns: Vec::new(),
+            table_nullable: None,
+            alias,
+            dependants: Vec::new(),
         }
     }
 
@@ -395,7 +256,8 @@ impl Table {
         self.columns.push(TableColumn::new(
             column_name,
             catalog_nullable,
-            &self.table_name,
+            self.table_id,
+            ColumnId::new(self.columns.len()),
         ));
         self
     }
@@ -408,28 +270,56 @@ impl Table {
         self.alias == other.alias && self.table_name == other.table_name
     }
 
-    pub fn add_dependancy(&mut self, other: &Self) {
-        self.depends_on.push(other.clone())
+    pub fn add_dependent(&mut self, other: &Self) {
+        self.dependants.push(other.table_id)
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub struct TableColumn {
     pub column_name: String,
     pub catalog_nullable: bool,
-    pub table_name: String,
+    pub inferred_nullable: Option<bool>,
+
+    pub column_id: ColumnId,
+    pub table_id: TableId,
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub struct TableId(usize);
+
+impl TableId {
+    pub fn new(d: usize) -> Self {
+        Self(d)
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub struct ColumnId(usize);
+
+impl ColumnId {
+    pub fn new(d: usize) -> Self {
+        Self(d)
+    }
 }
 
 impl TableColumn {
     pub fn new(
         column_name: impl Into<String>,
         catalog_nullable: bool,
-        table_name: impl Into<String>,
+        table_id: TableId,
+        column_id: ColumnId,
     ) -> Self {
         Self {
+            table_id,
+            column_id,
             column_name: column_name.into(),
             catalog_nullable,
-            table_name: table_name.into(),
+            inferred_nullable: None,
         }
+    }
+
+    pub fn get_nullable(&self) -> bool {
+        self.inferred_nullable.unwrap_or(self.catalog_nullable)
     }
 }

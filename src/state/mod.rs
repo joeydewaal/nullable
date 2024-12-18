@@ -1,8 +1,8 @@
 use std::time::Instant;
 
-use sqlparser::{ast::Statement, dialect::PostgreSqlDialect, parser::Parser};
+use sqlparser::{ast::Statement, parser::Parser};
 
-use crate::{statement::nullable_from_statement, table::Source};
+use crate::{context::Context, statement::nullable_from_statement, table::Source, SqlFlavour, Tables};
 
 pub struct NullableState {
     parsed_query: Vec<Statement>,
@@ -11,8 +11,8 @@ pub struct NullableState {
 }
 
 impl NullableState {
-    pub fn new(query: &str, source: Source) -> Self {
-        let query = Parser::parse_sql(&PostgreSqlDialect {}, query).unwrap();
+    pub fn new(query: &str, source: Source, flavour: SqlFlavour) -> Self {
+        let query = Parser::parse_sql(flavour.to_dialect(), query).unwrap();
 
         Self {
             parsed_query: query,
@@ -24,7 +24,10 @@ impl NullableState {
     pub fn get_nullable(&mut self) -> Vec<bool> {
         dbg!(&self.parsed_query);
         let s = self.parsed_query.first().unwrap();
-        let inferred_nullable = nullable_from_statement(&s, &self.source);
+
+        let mut context = Context::new(Tables::new(), self.source.clone());
+
+        let inferred_nullable = nullable_from_statement(&s, &mut context).unwrap();
         println!("{:?}", self.started.elapsed());
         inferred_nullable.get_nullable()
     }

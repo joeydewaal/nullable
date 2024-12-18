@@ -1,33 +1,31 @@
 use sqlparser::ast::{Select, SelectItem};
 
-use crate::{expr::visit_expr, nullable::Nullable, Source, Tables};
+use crate::{context::Context, expr::visit_expr, nullable::Nullable};
 
-pub fn nullable_from_select(select: &Select, source: &Source) -> Nullable {
-    let mut active_tables = Tables::new();
-
+pub fn nullable_from_select(select: &Select, context: &mut Context) -> anyhow::Result<Nullable> {
     for table in &select.from {
-        active_tables.visit_join_active_table(table, source);
+        context.visit_join_active_table(table);
     }
 
-    active_tables.update_nullable_from_select(select);
-
-    println!("{active_tables:#?}");
+    dbg!(&context.tables);
+    context.update_nullable_from_select_joins(select);
+    context.update_nullable_from_select_where(select)?;
+    dbg!(&context.tables);
 
     let n: Vec<_> = select
         .projection
         .iter()
-        .map(|c| visit_select_item(c, &active_tables).unwrap_or(true))
+        .map(|c| visit_select_item(c, context).unwrap_or(true))
         .collect();
-
-    Nullable::new(n)
+    Ok(Nullable::new(n))
 }
 
-pub fn visit_select_item(select_item: &SelectItem, tables: &Tables) -> Option<bool> {
+pub fn visit_select_item(select_item: &SelectItem, context: &mut Context) -> Option<bool> {
     match select_item {
-        SelectItem::UnnamedExpr(expr) => visit_expr(&expr, None, tables),
+        SelectItem::UnnamedExpr(expr) => visit_expr(&expr, None, context),
         SelectItem::ExprWithAlias { expr, alias } => {
-            visit_expr(&expr, Some(alias.value.clone()), tables)
+            visit_expr(&expr, Some(alias.value.clone()), context)
         }
-        _ => None,
+        _ => unimplemented!("{select_item:?}"),
     }
 }
