@@ -226,4 +226,3 @@
 //     println!("{:?}", nullable);
 //     assert!(nullable == [false, true]);
 // }
-

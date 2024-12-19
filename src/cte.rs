@@ -8,9 +8,7 @@ pub fn visit_cte(cte: &Cte, context: &mut Context) -> Result<()> {
 
     let nullable = nullable_from_query(&cte.query, context)?.flatten();
 
-    for _row in nullable.into_iter() {
-
-    }
+    for _row in nullable.into_iter() {}
 
     context.push(table);
     Ok(())

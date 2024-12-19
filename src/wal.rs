@@ -51,5 +51,4 @@ impl Wal {
         }
         None
     }
-
 }

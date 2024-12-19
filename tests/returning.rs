@@ -15,10 +15,7 @@ pub fn returning_basic() {
  "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable = state.get_nullable(&[
-        "id",
-        "name"
-    ]);
+    let nullable = state.get_nullable(&["id", "name"]);
     println!("{:?}", nullable);
     assert!(nullable == [false, false])
 }
@@ -38,10 +35,7 @@ pub fn returning_basic_2() {
  "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable = state.get_nullable(&[
-        "id",
-        "name"
-    ]);
+    let nullable = state.get_nullable(&["id", "name"]);
     println!("{:?}", nullable);
     assert!(nullable == [false, true])
 }

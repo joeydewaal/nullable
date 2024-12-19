@@ -171,11 +171,7 @@ pub fn basic_select1() {
     "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable = state.get_nullable(&[
-        "id",
-        "username",
-        "emailadres"
-    ]);
+    let nullable = state.get_nullable(&["id", "username", "emailadres"]);
     println!("{:?}", nullable);
     assert!(nullable == [false, false, true])
 }
@@ -653,7 +649,7 @@ pub fn basic_left_join_func1() {
         "emailadres",
         "pet_id",
         "pet_name",
-        "?column?"
+        "?column?",
     ]);
     println!("{:?}", nullable);
     assert!(nullable == [false, false, true, false, false, false])
@@ -697,7 +693,7 @@ pub fn basic_right_join_func1() {
         "emailadres",
         "pet_id",
         "pet_name",
-        "?column?"
+        "?column?",
     ]);
     println!("{:?}", nullable);
     assert!(nullable == [true, true, true, false, false, false])
@@ -742,14 +738,7 @@ pub fn double_right_join() {
      "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable = state.get_nullable(&[
-        "id",
-        "name",
-        "id",
-        "name",
-        "pet_id",
-        "pet_name"
-    ]);
+    let nullable = state.get_nullable(&["id", "name", "id", "name", "pet_id", "pet_name"]);
     println!("{:?}", nullable);
     assert!(nullable == [true, true, false, false, true, true])
 }
