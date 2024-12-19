@@ -74,15 +74,10 @@ impl Nullable {
         if let Some((left_index, left_nullable)) = self.l_find_index(&col_name) {
             if let Some((right_index, _right_nullable)) = self.r_find_index(&col_name) {
                 if left_index == right_index {
-                    println!("{col_name:?} name");
                     return left_nullable;
-                } else {
-                    println!("{left_index} {right_index} {col_name:?}");
                 }
             }
         }
-
-        println!("from idx");
         self.0[index].value
     }
 
@@ -200,3 +195,5 @@ impl StatementNullable {
         results
     }
 }
+
+// pub fn nullable_from_info(column_nullable: Option<bool>, table_nullable: Option<bool>)

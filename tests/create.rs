@@ -1,4 +1,4 @@
-use mylib::{NullableState, Source, SqlFlavour, Table};
+use mylib::{NullableState, Source, SqlFlavour};
 
 #[test]
 pub fn create_1() {

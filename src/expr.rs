@@ -38,12 +38,11 @@ pub fn visit_expr(
 ) -> anyhow::Result<NullableResult> {
     match expr {
         Expr::CompoundIdentifier(idents) => {
-            let value = context.tables.nullable_for_ident(&idents)?.set_alias(alias);
+            let value = context.nullable_for_ident(&idents)?.set_alias(alias);
             Ok(value)
         }
         Expr::Identifier(col_name) => {
             let value = context
-                .tables
                 .nullable_for_ident(&[col_name.clone()])?
                 .set_alias(alias);
             Ok(value)
@@ -85,7 +84,6 @@ pub fn visit_expr(
             dbg!(&query);
             let r = nullable_from_query(&query, context)
                 .map(|r| r.get_nullable().iter().any(|n| *n == Some(true)))?;
-            dbg!(&r);
             Ok(NullableResult::unnamed(Some(r)).set_alias(alias))
         }
         _ => unimplemented!("{:?}", expr),
@@ -133,7 +131,6 @@ pub fn get_nullable_col(
             x.append(&mut left);
             x.append(&mut right);
 
-            dbg!(&x);
             return Ok(x);
         }
         Expr::CompoundIdentifier(_) => Ok(vec![]),
@@ -147,14 +144,12 @@ fn get_column(expr: &Expr, context: &mut Context) -> anyhow::Result<Option<Table
     match expr {
         Expr::CompoundIdentifier(idents) => {
             let (col, _table) = context
-                .tables
                 .find_col_by_idents(&idents)
                 .context(format!("table not found: {expr:?}"))?;
             Ok(Some(col))
         }
         Expr::Identifier(ident) => {
             let (col, _table) = context
-                .tables
                 .find_col_by_idents(&[ident.clone()])
                 .context(format!("table not found: {expr:?}"))?;
             Ok(Some(col))

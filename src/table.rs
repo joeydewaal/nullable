@@ -1,8 +1,6 @@
 use anyhow::anyhow;
 use sqlparser::ast::{Expr, Ident, TableFactor};
-use std::{fmt::Debug, slice::Iter};
-
-use crate::nullable::NullableResult;
+use std::fmt::Debug;
 
 #[derive(Debug, Clone)]
 pub struct Source {
@@ -34,24 +32,24 @@ impl Tables {
         Self::default()
     }
 
-    pub fn apply(&mut self, data: Vec<(TableColumn, Option<bool>, Option<bool>)>) {
-        for (col, nullable_column, nullable_table) in data.into_iter() {
-            for t in self.0.iter_mut() {
-                if t.table_id == col.table_id {
-                    t.table_nullable = nullable_table;
-                    for column in t.columns.iter_mut() {
-                        if column.column_id == col.column_id {
-                            column.inferred_nullable = nullable_column
-                        }
-                    }
-                }
-            }
-        }
+    pub fn find_table_id(&self, table_id: TableId) -> Option<&Table> {
+        self.0.iter().find(|t| t.table_id == table_id)
     }
 
-    pub fn iter(&self) -> Iter<'_, Table> {
-        self.0.iter()
-    }
+    // pub fn apply(&mut self, data: Vec<(TableColumn, Option<bool>, Option<bool>)>) {
+    //     for (col, nullable_column, nullable_table) in data.into_iter() {
+    //         for t in self.0.iter_mut() {
+    //             if t.table_id == col.table_id {
+    //                 t.table_nullable = nullable_table;
+    //                 for column in t.columns.iter_mut() {
+    //                     if column.column_id == col.column_id {
+    //                         column.inferred_nullable = nullable_column
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
 
     pub fn len(&self) -> usize {
         self.0.len()
@@ -82,19 +80,23 @@ impl Tables {
         self.0.iter().find(|t| t.table_name == name)
     }
 
-    pub fn nullable_for_ident(&self, name: &[Ident]) -> anyhow::Result<NullableResult> {
-        let (col, table) = self.find_col_by_idents(name)?;
+    // pub fn nullable_for_ident(&self, name: &[Ident]) -> anyhow::Result<NullableResult> {
+    //     let (col, table) = self.find_col_by_idents(name)?;
 
-        if col.inferred_nullable.is_some() {
-            return Ok(NullableResult::named(col.inferred_nullable, name));
-        }
+    //     if let Some(wal_nullable) = self.find_table_by_idents_table
 
-        if table.table_nullable == Some(true) {
-            return Ok(NullableResult::named(Some(true), name));
-        } else {
-            return Ok(NullableResult::named(Some(col.get_nullable()), name));
-        }
-    }
+    //     dbg!(&col, &table);
+
+    //     if col.inferred_nullable.is_some() {
+    //         return Ok(NullableResult::named(col.inferred_nullable, name));
+    //     }
+
+    //     if table.table_nullable.is_some() {
+    //         return Ok(NullableResult::named(table.table_nullable, name));
+    //     } else {
+    //         return Ok(NullableResult::named(Some(col.get_nullable()), name));
+    //     }
+    // }
 
     pub fn find_col_by_idents(&self, name: &[Ident]) -> anyhow::Result<(TableColumn, &Table)> {
         // search for col
@@ -161,29 +163,6 @@ impl Tables {
         }
     }
 
-    pub fn set_table_nullable(&mut self, table_id: TableId, nullable: bool) {
-        for i in 0..self.len() {
-            if table_id == self.0[i].table_id {
-                println!("Setting {:?} to {}", self.0[i].table_name, nullable);
-                self.0[i].table_nullable = Some(nullable);
-
-                println!(
-                    "{:?} dependants {:?}",
-                    self.0[i].table_name,
-                    self.0[i].dependants.iter().map(|t| t).collect::<Vec<_>>()
-                );
-
-                if nullable {
-                    for y in 0..self.0[i].dependants.len() {
-                        let b = self.0[i].dependants[y].clone();
-                        println!("recursive");
-                        self.set_table_nullable(b, nullable)
-                    }
-                }
-            }
-        }
-    }
-
     pub fn find_table_by_table_factor(&self, factor: &TableFactor) -> Option<Table> {
         match &factor {
             TableFactor::Table { name, alias, .. } => {
@@ -204,7 +183,6 @@ impl Tables {
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub struct Table {
     pub table_id: TableId,
-    pub table_nullable: Option<bool>,
     pub original_name: Vec<Ident>,
     pub table_name: Vec<Ident>,
     pub columns: Vec<TableColumn>,
@@ -219,7 +197,6 @@ impl Table {
             table_name: vec![name.clone()],
             original_name: vec![name],
             columns: Vec::new(),
-            table_nullable: None,
             dependants: Vec::new(),
         }
     }
@@ -253,7 +230,6 @@ impl Table {
 pub struct TableColumn {
     pub column_name: Ident,
     pub catalog_nullable: bool,
-    pub inferred_nullable: Option<bool>,
 
     pub column_id: ColumnId,
     pub table_id: TableId,
@@ -289,11 +265,6 @@ impl TableColumn {
             column_id,
             column_name,
             catalog_nullable,
-            inferred_nullable: None,
         }
-    }
-
-    pub fn get_nullable(&self) -> bool {
-        self.inferred_nullable.unwrap_or(self.catalog_nullable)
     }
 }
