@@ -408,10 +408,10 @@ impl Context {
                                 println!("left joined {:?} on {:?}", &left_table, right_table);
                                 for r_table in right_table {
                                     if *r_table != left_table {
-                                        resolver.set_nullable(*r_table, Some(true));
+                                        resolver.set_nullable(*r_table, None);
                                     }
                                 }
-                                resolver.set_nullable(left_table, None);
+                                resolver.set_nullable(left_table, Some(true));
                             },
                         );
                     }
@@ -422,12 +422,12 @@ impl Context {
                             &left_table,
                             |left_table, right_table, resolver| {
                                 println!("inner joined {:?} on {:?}", &left_table, right_table);
-                                for r_table in right_table {
-                                    if *r_table != left_table {
-                                        resolver.set_nullable(*r_table, None);
-                                    }
-                                }
-                                resolver.set_nullable(left_table, None);
+                                // for r_table in right_table {
+                                //     if *r_table != left_table {
+                                //         resolver.set_nullable(*r_table, None);
+                                //     }
+                                // }
+                                // resolver.set_nullable(left_table, None);
                             },
                         );
                     }

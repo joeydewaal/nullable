@@ -53,9 +53,11 @@ impl JoinResolver {
     ) {
         if self.data.table_id == table_id {
             if depth == 1 && nullable.is_some() {
+                println!("setting table {table_id:?} to {nullable:?}");
                 self.data.nullable = nullable;
             } else if depth != 1 {
                 self.data.nullable = nullable;
+                println!("setting table {table_id:?} to {nullable:?}");
             }
             return;
         }

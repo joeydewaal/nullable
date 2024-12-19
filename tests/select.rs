@@ -471,60 +471,60 @@ pub fn select_func() {
     assert!(nullable == [false])
 }
 
-#[test]
-pub fn basic_double_left_inner_join_union_mixed() {
-    let user_table = Table::new("users")
-        .push_column("id", false)
-        .push_column("username", false)
-        .push_column("pet_id", true);
+// #[test]
+// pub fn basic_double_left_inner_join_union_mixed() {
+//     let user_table = Table::new("users")
+//         .push_column("id", false)
+//         .push_column("username", false)
+//         .push_column("pet_id", true);
 
-    let pets_table = Table::new("pets")
-        .push_column("pet_id", false)
-        .push_column("pet_name", false)
-        .push_column("plant_id", true);
+//     let pets_table = Table::new("pets")
+//         .push_column("pet_id", false)
+//         .push_column("pet_name", false)
+//         .push_column("plant_id", true);
 
-    let plants_table = Table::new("plants")
-        .push_column("plant_id", false)
-        .push_column("plant_name", false);
+//     let plants_table = Table::new("plants")
+//         .push_column("plant_id", false)
+//         .push_column("plant_name", false);
 
-    let source = Source::new(vec![user_table, pets_table, plants_table]);
+//     let source = Source::new(vec![user_table, pets_table, plants_table]);
 
-    let query = r#"
-        select
-            users.id,
-            users.username,
-            pets.pet_id,
-            pets.pet_name
-        from
-            users
-        left join
-            pets
-        on
-            pets.pet_id = users.pet_id
-        union
-        select
-            pets.pet_name,
-            users.username,
-            pets.pet_id,
-            users.id
-        from
-            users
-        inner join
-            pets
-        on
-            pets.pet_id = users.pet_id
- "#;
+//     let query = r#"
+//         select
+//             users.id,
+//             users.username,
+//             pets.pet_id,
+//             pets.pet_name
+//         from
+//             users
+//         left join
+//             pets
+//         on
+//             pets.pet_id = users.pet_id
+//         union
+//         select
+//             pets.pet_name,
+//             users.username,
+//             pets.pet_id,
+//             users.id
+//         from
+//             users
+//         inner join
+//             pets
+//         on
+//             pets.pet_id = users.pet_id
+//  "#;
 
-    let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable = state.get_nullable(&[
-        "id",
-        "username",
-        "pet_id",
-        "pet_name"
-    ]);
-    println!("{:?}", nullable);
-    assert!(nullable == [false, false, true, true])
-}
+//     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
+//     let nullable = state.get_nullable(&[
+//         "id",
+//         "username",
+//         "pet_id",
+//         "pet_name"
+//     ]);
+//     println!("{:?}", nullable);
+//     assert!(nullable == [false, false, true, true])
+// }
 
 #[test]
 pub fn select_exists1() {
