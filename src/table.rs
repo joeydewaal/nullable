@@ -36,21 +36,6 @@ impl Tables {
         self.0.iter().find(|t| t.table_id == table_id)
     }
 
-    // pub fn apply(&mut self, data: Vec<(TableColumn, Option<bool>, Option<bool>)>) {
-    //     for (col, nullable_column, nullable_table) in data.into_iter() {
-    //         for t in self.0.iter_mut() {
-    //             if t.table_id == col.table_id {
-    //                 t.table_nullable = nullable_table;
-    //                 for column in t.columns.iter_mut() {
-    //                     if column.column_id == col.column_id {
-    //                         column.inferred_nullable = nullable_column
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
-
     pub fn len(&self) -> usize {
         self.0.len()
     }

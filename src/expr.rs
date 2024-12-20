@@ -89,52 +89,49 @@ pub fn visit_expr(
     }
 }
 
-pub fn get_nullable_col(
-    expr: &Expr,
-    context: &mut Context,
-) -> anyhow::Result<Vec<(TableColumn, Option<bool>, Option<bool>)>> {
+pub fn get_nullable_col(expr: &Expr, context: &mut Context) -> anyhow::Result<()> {
     match expr {
         Expr::IsNotNull(not_null) => {
             if let Some(column) = get_column(&not_null, context)? {
-                return Ok(vec![(column, Some(false), Some(false))]);
+                context
+                    .wal
+                    .add_column(column.table_id, column.column_id, false);
+                context.wal.add_table(column.table_id, false);
             }
-            Ok(vec![])
+            Ok(())
         }
         Expr::BinaryOp { left, op, right } => {
-            let mut x = vec![];
-
-            println!("left_col:  {:?}", get_column(&left, context));
-            println!("right: {:?}", visit_expr(&right, None, context));
             if let (Some(left_col), Some(false)) = (
                 get_column(&left, context)?,
                 visit_expr(&right, None, context)?.value,
             ) {
-                x.push((left_col, Some(false), Some(false)));
+                context
+                    .wal
+                    .add_column(left_col.table_id, left_col.column_id, false);
+                context.wal.add_table(left_col.table_id, false);
             }
 
-            println!("right_col:  {:?}", get_column(&right, context));
-            println!("left:  {:?}", visit_expr(&left, None, context));
             if let (Some(right_col), Some(false)) = (
                 get_column(&right, context)?,
                 visit_expr(&left, None, context)?.value,
             ) {
-                x.push((right_col, Some(false), Some(false)));
+                context
+                    .wal
+                    .add_column(right_col.table_id, right_col.column_id, false);
+                context.wal.add_table(right_col.table_id, false);
             }
 
             if *op != BinaryOperator::And {
-                return Ok(x);
+                return Ok(());
             }
-            let mut left = get_nullable_col(left, context)?;
-            let mut right = get_nullable_col(right, context)?;
+            get_nullable_col(left, context)?;
+            get_nullable_col(right, context)?;
 
-            x.append(&mut left);
-            x.append(&mut right);
-
-            return Ok(x);
+            return Ok(());
         }
-        Expr::CompoundIdentifier(_) => Ok(vec![]),
-        Expr::Identifier(_ident) => Ok(vec![]),
-        Expr::Value(_) => Ok(vec![]),
+        Expr::CompoundIdentifier(_) => Ok(()),
+        Expr::Identifier(_ident) => Ok(()),
+        Expr::Value(_) => Ok(()),
         _ => unimplemented!("{expr:?}"),
     }
 }

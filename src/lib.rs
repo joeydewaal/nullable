@@ -2,6 +2,7 @@ mod context;
 mod cte;
 mod expr;
 mod func;
+mod join;
 mod join_resolver;
 mod nullable;
 mod query;
@@ -10,7 +11,6 @@ mod state;
 mod statement;
 mod table;
 mod wal;
-mod join;
 mod where_;
 
 use sqlparser::dialect::{Dialect, PostgreSqlDialect, SQLiteDialect};

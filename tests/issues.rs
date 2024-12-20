@@ -15,10 +15,7 @@ pub fn one() {
  "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Sqlite);
-    let nullable = state.get_nullable(&[
-        "id",
-        "votes"
-    ]);
+    let nullable = state.get_nullable(&["id", "votes"]);
     println!("{:?}", nullable);
     assert!(nullable == [false, false])
 }
@@ -54,14 +51,7 @@ pub fn issue_2796() {
         LEFT JOIN baz ON baz.id = bar.baz_id "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable = state.get_nullable(&[
-        "id",
-        "name",
-        "bar_id",
-        "bar_name",
-        "baz_id",
-        "baz_name",
-    ]);
+    let nullable = state.get_nullable(&["id", "name", "bar_id", "bar_name", "baz_id", "baz_name"]);
     println!("{:?}", nullable);
     assert!(nullable == [false, false, true, true, true, true])
 }
@@ -175,7 +165,7 @@ pub fn sqlx_issue_3202() {
         "prev_position",
         "delta",
         "artist",
-        "title"
+        "title",
     ]);
     println!("{:?}", nullable);
     assert!(nullable == [false, false, true, true, false, false])

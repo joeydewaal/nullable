@@ -21,11 +21,7 @@ pub fn where1() {
  "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable = state.get_nullable(&[
-        "user_id",
-        "name",
-        "emailadres"
-    ]);
+    let nullable = state.get_nullable(&["user_id", "name", "emailadres"]);
     println!("{:?}", nullable);
     assert!(nullable == [false, false, false])
 }
@@ -60,13 +56,7 @@ pub fn where3() {
  "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable = state.get_nullable(&[
-        "agenda_id",
-        "startdate",
-        "user_id",
-        "emailadres",
-        "age"
-    ]);
+    let nullable = state.get_nullable(&["agenda_id", "startdate", "user_id", "emailadres", "age"]);
     println!("{:?}", nullable);
     assert!(nullable == [false, false, false, false, true])
 }
@@ -102,13 +92,7 @@ pub fn where4() {
  "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable = state.get_nullable(&[
-        "agenda_id",
-        "startdate",
-        "user_id",
-        "emailadres",
-        "age"
-    ]);
+    let nullable = state.get_nullable(&["agenda_id", "startdate", "user_id", "emailadres", "age"]);
     println!("{:?}", nullable);
     assert!(nullable == [false, false, false, false, false])
 }
@@ -144,13 +128,7 @@ pub fn where5() {
  "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable = state.get_nullable(&[
-        "agenda_id",
-        "startdate",
-        "user_id",
-        "emailadres",
-        "age"
-    ]);
+    let nullable = state.get_nullable(&["agenda_id", "startdate", "user_id", "emailadres", "age"]);
     println!("{:?}", nullable);
     assert!(nullable == [false, false, false, false, false])
 }
@@ -185,13 +163,7 @@ pub fn where6() {
      "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable = state.get_nullable(&[
-        "agenda_id",
-        "startdate",
-        "user_id",
-        "emailadres",
-        "age"
-    ]);
+    let nullable = state.get_nullable(&["agenda_id", "startdate", "user_id", "emailadres", "age"]);
     println!("{:?}", nullable);
     assert!(nullable == [false, false, false, true, false])
 }
@@ -226,13 +198,7 @@ pub fn where7() {
      "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable = state.get_nullable(&[
-        "agenda_id",
-        "startdate",
-        "user_id",
-        "emailadres",
-        "age"
-    ]);
+    let nullable = state.get_nullable(&["agenda_id", "startdate", "user_id", "emailadres", "age"]);
     println!("{:?}", nullable);
     assert!(nullable == [false, false, true, true, true])
 }
@@ -267,13 +233,7 @@ pub fn where8() {
      "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable = state.get_nullable(&[
-        "agenda_id",
-        "startdate",
-        "user_id",
-        "emailadres",
-        "age"
-    ]);
+    let nullable = state.get_nullable(&["agenda_id", "startdate", "user_id", "emailadres", "age"]);
     println!("{:?}", nullable);
     assert!(nullable == [false, false, false, true, false])
 }
