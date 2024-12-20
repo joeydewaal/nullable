@@ -1,3 +1,4 @@
+use anyhow::Context as _;
 use sqlparser::ast::Statement;
 
 use crate::{
@@ -27,6 +28,20 @@ pub fn nullable_from_statement(
 
             if let Some(returning) = returning {
                 context.add_active_tables(table)?;
+                for item in returning {
+                    nullable.append(&mut visit_select_item(item, context)?);
+                }
+            }
+            Ok(nullable.into())
+        }
+        Statement::Insert(insert) => {
+            let mut nullable = Nullable::empty();
+
+            if let Some(returning) = &insert.returning {
+                let table = context.source.find_by_original_name(&insert.table_name.0)
+                    .context("Could not find")?;
+                context.push(table.clone());
+
                 for item in returning {
                     nullable.append(&mut visit_select_item(item, context)?);
                 }
