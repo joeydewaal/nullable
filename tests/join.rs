@@ -162,7 +162,6 @@ pub fn full_outer_join_2() {
     assert!(nullable == [true, true, true, true, true, true])
 }
 
-
 #[test]
 pub fn full_outer_join_3() {
     let color_table = Table::new("colors")
@@ -198,7 +197,6 @@ pub fn full_outer_join_3() {
     assert!(nullable == [false, true, true, true, false, true])
 }
 
-
 #[test]
 pub fn cross_join_3() {
     let table_1 = Table::new("users")
@@ -225,13 +223,7 @@ left join pets pets2 on pets2.pet_id = users.pet_id
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
     let nullable = state.get_nullable(&[
-        "id",
-        "username",
-        "pet_id",
-        "pet_id",
-        "pet_name",
-        "pet_id",
-        "pet_name",
+        "id", "username", "pet_id", "pet_id", "pet_name", "pet_id", "pet_name",
     ]);
     println!("{:?}", nullable);
     assert!(nullable == [false, false, true, false, false, true, true])
@@ -263,13 +255,7 @@ right join pets pets2 on pets2.pet_id = users.pet_id
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
     let nullable = state.get_nullable(&[
-        "id",
-        "username",
-        "pet_id",
-        "pet_id",
-        "pet_name",
-        "pet_id",
-        "pet_name",
+        "id", "username", "pet_id", "pet_id", "pet_name", "pet_id", "pet_name",
     ]);
     println!("{:?}", nullable);
     assert!(nullable == [true, true, true, true, true, false, false])
@@ -301,13 +287,7 @@ full outer join pets pets2 on pets2.pet_id = users.pet_id
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
     let nullable = state.get_nullable(&[
-        "id",
-        "username",
-        "pet_id",
-        "pet_id",
-        "pet_name",
-        "pet_id",
-        "pet_name",
+        "id", "username", "pet_id", "pet_id", "pet_name", "pet_id", "pet_name",
     ]);
     println!("{:?}", nullable);
     assert!(nullable == [true, true, true, true, true, true, true])

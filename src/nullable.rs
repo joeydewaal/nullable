@@ -38,7 +38,7 @@ impl NullableResult {
     }
 
     pub fn combine(&mut self, other: NullableResult) {
-        self.value =  match (self.value, other.value) {
+        self.value = match (self.value, other.value) {
             (Some(first), Some(second)) => Some(first || second),
             (Some(first), None) => Some(first),
             (None, Some(second)) => Some(second),

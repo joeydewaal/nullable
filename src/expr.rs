@@ -91,7 +91,6 @@ pub fn visit_expr(
                 nullable.push(visit_expr(expr, None, context)?);
             }
             nullable.to_result().ok_or(anyhow!("Geen output gevonden"))
-
         }
         _ => unimplemented!("{:?}", expr),
     }

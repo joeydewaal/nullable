@@ -115,7 +115,7 @@ impl Tables {
         return Err(anyhow!("Not found"));
     }
 
-    pub fn find_cols_by_idents(&self, name: &[Ident]) -> Vec<(TableColumn,&Table)> {
+    pub fn find_cols_by_idents(&self, name: &[Ident]) -> Vec<(TableColumn, &Table)> {
         let mut tables = Vec::new();
 
         // search for col
