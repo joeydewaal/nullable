@@ -69,3 +69,17 @@ left join pets on pets.pet_id = users.pet_id
     println!("found: {:?}", nullable);
     assert!(nullable == [false, true, true, true])
 }
+
+#[test]
+pub fn wildcard_4() {
+    let source = Source::empty();
+
+    let query = r#"
+        SELECT * FROM (VALUES (1, 'one'), (2, 'two'), (3, 'three')) AS t (num,letter);
+    "#;
+
+    let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
+    let nullable = state.get_nullable(&["num", "letter"]);
+    println!("found: {:?}", nullable);
+    assert!(nullable == [false, false])
+}

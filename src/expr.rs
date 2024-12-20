@@ -27,6 +27,7 @@ pub fn nullable_from_set_expr(
             nullable.combine(nullable_from_set_expr(&right, context)?);
             Ok(nullable)
         }
+        SetExpr::Values(values) => context.nullable_from_values(values),
         _ => unimplemented!("{expr:?}"),
     }
 }

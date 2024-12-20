@@ -37,6 +37,9 @@ pub fn visit_func(func: &Function, context: &mut Context) -> anyhow::Result<Null
                 None
             }
         }
+        "current_timestamp" if args_nullables(&func.args, context)?.is_empty() => {
+            Some(false)
+        }
         _ => unimplemented!("{func:?}"),
     };
 
@@ -49,7 +52,8 @@ fn args_nullables(
 ) -> anyhow::Result<Vec<Option<bool>>> {
     match args {
         FunctionArguments::List(list) => arg_list_nullable(&list, context),
-        _ => unimplemented!(),
+        FunctionArguments::None => Ok(Vec::new()),
+        subquery => unimplemented!("{subquery:?}"),
     }
 }
 

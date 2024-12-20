@@ -52,8 +52,16 @@ impl Context {
                 alias,
             } => {
                 let nullables = nullable_from_query(subquery, self)?;
-                let table = nullables.flatten().to_table(alias);
-                self.push(table);
+                dbg!(&nullables);
+                let mut table = nullables.flatten(); //.to_table(alias);
+                                                     //
+                if let Some(alias) = alias {
+                    for (col, col_name) in table.iter_mut().zip(alias.columns.clone()) {
+                        col.column_name = Some(col_name);
+                    }
+                }
+                dbg!(&table);
+                self.push(table.to_table(alias));
                 Ok(())
             }
             TableFactor::UNNEST {

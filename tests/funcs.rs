@@ -33,3 +33,18 @@ pub fn func1() {
     println!("{:?}", nullable);
     assert!(nullable == [false, false, false, false, false])
 }
+
+#[test]
+pub fn func2() {
+    let source = Source::empty();
+
+    let query = r#"
+        select current_timestamp
+ "#;
+
+    let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
+    let nullable =
+        state.get_nullable(&["current_timestamp"]);
+    println!("{:?}", nullable);
+    assert!(nullable == [false])
+}

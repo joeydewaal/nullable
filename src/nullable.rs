@@ -3,15 +3,8 @@ use sqlparser::ast::Ident;
 use crate::{Table, ToOptName};
 
 #[derive(Debug)]
-pub enum NullablePlace {
-    Named { name: Ident },
-    Unnamed,
-}
-
-#[derive(Debug)]
 pub struct NullableResult {
     pub column_name: Option<Ident>,
-    // pub place: NullablePlace,
     pub value: Option<bool>,
 }
 
@@ -75,6 +68,9 @@ impl Nullable {
         Some(result)
     }
 
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut NullableResult> {
+        self.0.iter_mut()
+    }
     // pub fn into_iter(self) -> impl Iterator<Item = NullableResult> {
     //     self.0.into_iter()
     // }
