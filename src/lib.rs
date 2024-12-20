@@ -10,6 +10,8 @@ mod state;
 mod statement;
 mod table;
 mod wal;
+mod join;
+mod where_;
 
 use sqlparser::dialect::{Dialect, PostgreSqlDialect, SQLiteDialect};
 pub use state::NullableState;

@@ -1,14 +1,10 @@
 use std::collections::HashSet;
 
 use anyhow::anyhow;
-use sqlparser::ast::{
-    Expr, Ident, JoinConstraint, JoinOperator, Select, TableFactor, TableWithJoins, With,
-};
+use sqlparser::ast::{Expr, Ident, TableFactor, TableWithJoins, With};
 
 use crate::{
     cte::visit_cte,
-    expr::get_nullable_col,
-    join_resolver::JoinResolver,
     nullable::NullableResult,
     wal::{Wal, WalEntry},
     Source, Table, TableColumn, TableId, Tables,
@@ -27,29 +23,6 @@ impl Context {
             source,
             wal,
         }
-    }
-
-    pub fn update_nullable_from_select_where(&mut self, select: &Select) -> anyhow::Result<()> {
-        let Some(ref selection) = select.selection else {
-            return Ok(());
-        };
-
-        let x = get_nullable_col(selection, self)?;
-        for (col, nullable_column, nullable_table) in x.iter() {
-            if let Some(col_nullable) = nullable_column {
-                self.wal
-                    .add_column(col.table_id, col.column_id, *col_nullable);
-            }
-
-            if let Some(table_nullable) = nullable_table {
-                self.wal.add_table(col.table_id, *table_nullable);
-            }
-        }
-
-        todo!();
-        // self.tables.apply(x);
-
-        Ok(())
     }
 
     pub fn add_active_tables(&mut self, table: &TableWithJoins) {
@@ -98,7 +71,11 @@ impl Context {
                 self.recursive_find_joined_tables(&left, tables);
                 self.recursive_find_joined_tables(&right, tables);
             }
-            _ => (),
+            Expr::Subscript { expr, subscript: _ } => {
+                self.recursive_find_joined_tables(expr, tables)
+            }
+            Expr::Value(_) => (),
+            others => unimplemented!("{others:?}"),
         }
     }
 
@@ -120,17 +97,18 @@ impl Context {
         self.tables.0.iter().find(|t| t.table_name == name)
     }
 
-    pub fn nullable_for_table_col(&self, table: &Table, col: &TableColumn) -> anyhow::Result<NullableResult> {
+    pub fn nullable_for_table_col(
+        &self,
+        table: &Table,
+        col: &TableColumn,
+    ) -> anyhow::Result<NullableResult> {
         let mut col_name = table.table_name.clone();
         col_name.push(col.column_name.clone());
 
         // check col nullable in wal
         if let Some(wal_nullable) = self.wal.nullable_for_col(table, col.column_id) {
             println!("found col null {} {col_name:?}", wal_nullable);
-            if wal_nullable {
-
-                return Ok(NullableResult::named(Some(wal_nullable), &col_name));
-            }
+            return Ok(NullableResult::named(Some(wal_nullable), &col_name));
         }
 
         // check table nullable in wal
@@ -224,103 +202,5 @@ impl Context {
             }
         }
         None
-    }
-
-    pub fn update_from_join(&mut self, select: &Select) {
-        for table in &select.from {
-            let base_table = self.find_table_by_table_factor(&table.relation).unwrap();
-
-            let mut join_resolver = JoinResolver::from_base(base_table.table_id);
-
-            for join in &table.joins {
-                let left_table = self.find_table_by_table_factor(&join.relation).unwrap();
-
-                match &join.join_operator {
-                    JoinOperator::LeftOuter(inner) => {
-                        self.handle_join_constraint2(
-                            &mut join_resolver,
-                            &inner,
-                            &left_table,
-                            |left_table, right_table, resolver| {
-                                println!("left joined {:?} on {:?}", &left_table, right_table);
-                                for r_table in right_table {
-                                    if *r_table != left_table {
-                                        resolver.set_nullable(*r_table, None);
-                                    }
-                                }
-                                resolver.set_nullable(left_table, Some(true));
-                            },
-                        );
-                    }
-                    JoinOperator::Inner(inner) => {
-                        self.handle_join_constraint2(
-                            &mut join_resolver,
-                            &inner,
-                            &left_table,
-                            |left_table, right_table, resolver| {
-                                println!("inner joined {:?} on {:?}", &left_table, right_table);
-                                for r_table in right_table {
-                                    if *r_table != left_table {
-                                        resolver.set_nullable_if_base(*r_table, false);
-                                    }
-                                }
-                            },
-                        );
-                    }
-                    JoinOperator::RightOuter(inner) => {
-                        self.handle_join_constraint2(
-                            &mut join_resolver,
-                            &inner,
-                            &left_table,
-                            |left_table, right_table, resolver| {
-                                println!("right joined {:?} on {:?}", &left_table, right_table);
-                                for r_table in right_table {
-                                    if *r_table != left_table {
-                                        resolver.set_nullable(*r_table, Some(true));
-                                    }
-                                }
-                                resolver.set_nullable(left_table, Some(false));
-                            },
-                        );
-                    }
-                    _ => (),
-                }
-            }
-            // dbg!(&join_resolver);
-            let join_nullable = join_resolver.get_nullables();
-            // dbg!(&join_nullable);
-            for (table_id, nullable) in join_nullable {
-                self.wal.add_table(table_id, nullable);
-            }
-        }
-    }
-
-    fn handle_join_constraint2(
-        &mut self,
-        join_resolver: &mut JoinResolver,
-        constraint: &JoinConstraint,
-        left_joined_table: &Table,
-        callback: impl Fn(TableId, &[TableId], &mut JoinResolver),
-    ) {
-        // println!("left_joined_col {:#?}", left_joined_table.table_name);
-        match &constraint {
-            JoinConstraint::On(expr) => {
-                let mut t = HashSet::new();
-                self.recursive_find_joined_tables(expr, &mut t);
-                let right_tables: Vec<_> = t.into_iter().map(|t| t.table_id).collect();
-
-                let left_table = right_tables
-                    .iter()
-                    .find(|table| **table == left_joined_table.table_id)
-                    .unwrap();
-
-                for right_table in &right_tables {
-                    join_resolver.add_leaf(*right_table, *left_table, None);
-                }
-
-                let _ = (callback)(*left_table, &right_tables, join_resolver);
-            }
-            _ => (),
-        }
     }
 }

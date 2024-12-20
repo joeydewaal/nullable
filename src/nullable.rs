@@ -63,8 +63,6 @@ impl Nullable {
     pub fn nullable(&self, col_name: &str, index: usize) -> Option<bool> {
         let col_name = Ident::new(col_name);
 
-        dbg!(&self);
-
         if let Some((left_index, left_nullable)) = self.l_find_index(&col_name) {
             if let Some((right_index, _right_nullable)) = self.r_find_index(&col_name) {
                 if left_index == right_index {
@@ -178,7 +176,6 @@ impl StatementNullable {
     }
 
     pub fn get_nullable_final(self, cols: &[&str]) -> Vec<bool> {
-        dbg!(&self);
         let nullables = self.flatten();
 
         let mut results = Vec::new();
