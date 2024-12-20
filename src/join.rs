@@ -69,6 +69,23 @@ impl Context {
                             },
                         );
                     }
+                    JoinOperator::FullOuter(inner) => {
+                        self.handle_join_constraint(
+                            &mut join_resolver,
+                            &inner,
+                            &base_table,
+                            &left_table,
+                            |left_table, right_table, resolver| {
+                                println!("right joined {:?} on {:?}", &left_table, right_table);
+                                for r_table in right_table {
+                                    if *r_table != left_table {
+                                        resolver.set_nullable(*r_table, Some(true));
+                                    }
+                                }
+                                resolver.set_nullable(left_table, Some(true));
+                            },
+                        );
+                    }
                     operator => unimplemented!("{operator:?}"),
                 }
             }
@@ -126,7 +143,7 @@ impl Context {
                 let _ = (callback)(*left_table, &right_tables, join_resolver);
             }
             JoinConstraint::Natural => {
-                let right_tables = vec![base_table.table_id,left_joined_table.table_id];
+                let right_tables = vec![base_table.table_id, left_joined_table.table_id];
 
                 let left_table = right_tables
                     .iter()
