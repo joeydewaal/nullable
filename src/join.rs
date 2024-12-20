@@ -160,7 +160,9 @@ impl Context {
 
                 let _ = (callback)(*left_table, &right_tables, join_resolver);
             }
-            other => unimplemented!("{other:?}"),
+            JoinConstraint::None => {
+                panic!("not sure what to do here?");
+            }
         }
     }
 }

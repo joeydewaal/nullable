@@ -59,11 +59,11 @@ impl JoinResolver {
     ) {
         if self.data.table_id == table_id {
             if depth == 1 && nullable.is_some() {
-                println!("setting table {table_id:?} to {nullable:?}");
+                // println!("setting table {table_id:?} to {nullable:?}");
                 self.data.nullable = nullable;
             } else if depth != 1 {
                 self.data.nullable = nullable;
-                println!("setting table {table_id:?} to {nullable:?}");
+                // println!("setting table {table_id:?} to {nullable:?}");
             }
             return;
         }
@@ -99,80 +99,5 @@ impl JoinResolver {
         }
 
         parent_nullable
-    }
-}
-
-#[cfg(test)]
-mod test_join {
-    use crate::TableId;
-
-    use super::JoinResolver;
-
-    // #[test]
-    // fn testing1() {
-    //     // from 1
-    //     // left join 2 on 2 = 1
-    //     let base = TableId::new(1);
-
-    //     let mut resolver = JoinResolver::from_base(base);
-    //     resolver.add_leaf(base, TableId::new(2), None);
-
-    //     dbg!(resolver);
-    // }
-
-    // #[test]
-    // fn testing2() {
-    //     // from 1
-    //     // left join 2 on 2 = 1
-    //     let table_1 = TableId::new(1);
-    //     let table_2 = TableId::new(2);
-    //     let table_3 = TableId::new(3);
-
-    //     let mut resolver = JoinResolver::from_base(table_1);
-    //     resolver.add_leaf(table_1, table_2, None);
-    //     resolver.add_leaf(table_2, table_3, None);
-
-    //     dbg!(&resolver);
-    //     dbg!(resolver.get_nullables());
-    // }
-
-    // #[test]
-    // fn testing3() {
-    //     // from 1
-    //     // left join 2 on 2 = 1
-    //     let table_1 = TableId::new(1);
-    //     let table_2 = TableId::new(2);
-    //     let table_3 = TableId::new(3);
-
-    //     let mut resolver = JoinResolver::from_base(table_1);
-    //     resolver.add_leaf(table_1, table_2, None);
-    //     resolver.add_leaf(table_2, table_3, None);
-
-    //     resolver.set_nullable(table_1, Some(true));
-    //     resolver.set_nullable(table_3, Some(false));
-
-    //     dbg!(&resolver);
-    //     dbg!(resolver.get_nullables());
-    // }
-    #[test]
-    fn testing4() {
-        // from 1 users
-        // inner join 2 pets
-        // on 2 = 1
-        // right join 3 company
-        // on 3 = 1
-        let table_1 = TableId::new(1);
-        let table_2 = TableId::new(2);
-        let table_3 = TableId::new(3);
-
-        let mut resolver = JoinResolver::from_base(table_1);
-        resolver.add_leaf(table_1, table_2, None);
-        resolver.add_leaf(table_1, table_3, None);
-
-        resolver.set_nullable(table_1, Some(true));
-        resolver.set_nullable(table_3, Some(false));
-
-        dbg!(&resolver);
-        dbg!(resolver.get_nullables());
     }
 }

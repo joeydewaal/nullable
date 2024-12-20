@@ -11,7 +11,6 @@ pub fn nullable_from_select(select: &Select, context: &mut Context) -> anyhow::R
         context.add_active_tables(table)?;
     }
 
-    // dbg!(&context.tables);
     context.update_from_join(select)?;
     context.update_from_where(select)?;
     dbg!(&context.tables);
@@ -23,8 +22,6 @@ pub fn nullable_from_select(select: &Select, context: &mut Context) -> anyhow::R
         .map(|c| visit_select_item(c, context).unwrap())
         .flatten()
         .collect();
-
-    dbg!(&n);
 
     Ok(Nullable::new(n))
 }
