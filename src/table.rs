@@ -1,5 +1,5 @@
 use anyhow::anyhow;
-use sqlparser::ast::{Expr, Ident, TableFactor};
+use sqlparser::ast::{Expr, Ident, TableAlias, TableFactor};
 use std::fmt::Debug;
 
 #[derive(Debug, Clone)]
@@ -19,7 +19,7 @@ impl Source {
     pub fn find_by_original_name(&self, name: &[Ident]) -> Option<Table> {
         self.tables
             .iter()
-            .find(|t| t.original_name == name)
+            .find(|t| t.original_name.as_deref() == Some(name))
             .cloned()
     }
 
@@ -66,26 +66,8 @@ impl Tables {
     }
 
     pub fn find_table_by_idents_table(&self, name: &[Ident]) -> Option<&Table> {
-        self.0.iter().find(|t| t.table_name == name)
+        self.0.iter().find(|t| t.table_name.as_deref() == Some(name))
     }
-
-    // pub fn nullable_for_ident(&self, name: &[Ident]) -> anyhow::Result<NullableResult> {
-    //     let (col, table) = self.find_col_by_idents(name)?;
-
-    //     if let Some(wal_nullable) = self.find_table_by_idents_table
-
-    //     dbg!(&col, &table);
-
-    //     if col.inferred_nullable.is_some() {
-    //         return Ok(NullableResult::named(col.inferred_nullable, name));
-    //     }
-
-    //     if table.table_nullable.is_some() {
-    //         return Ok(NullableResult::named(table.table_nullable, name));
-    //     } else {
-    //         return Ok(NullableResult::named(Some(col.get_nullable()), name));
-    //     }
-    // }
 
     pub fn find_col_by_idents(&self, name: &[Ident]) -> anyhow::Result<(TableColumn, &Table)> {
         // search for col
@@ -103,7 +85,7 @@ impl Tables {
         if let Some(table) = self
             .0
             .iter()
-            .find(|table| table.table_name == name[..name.len() - 1])
+            .find(|table| table.table_name.as_deref() == Some(&name[..name.len() - 1][..]))
         {
             if let Some(col) = table
                 .columns
@@ -118,7 +100,7 @@ impl Tables {
         if let Some(table) = self
             .0
             .iter()
-            .find(|table| table.original_name == name[..name.len() - 1])
+            .find(|table| table.original_name.as_deref() == Some(&name[..name.len() - 1][..]))
         {
             if let Some(col) = table
                 .columns
@@ -159,7 +141,7 @@ impl Tables {
                     return self
                         .0
                         .iter()
-                        .find(|t| t.table_name.as_ref() == [alias.name.clone()])
+                        .find(|t| t.table_name.as_deref() == Some(&[alias.name.clone()][..]))
                         .cloned();
                 }
                 self.find_table_by_idents_table(&name.0).cloned()
@@ -172,23 +154,14 @@ impl Tables {
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub struct Table {
     pub table_id: TableId,
-    pub original_name: Vec<Ident>,
-    pub table_name: Vec<Ident>,
+    pub original_name: Option<Vec<Ident>>,
+    pub table_name: Option<Vec<Ident>>,
     pub columns: Vec<TableColumn>,
 }
 
 impl Table {
-    pub fn new(table_name: impl Into<String>) -> Self {
-        let name = Ident::new(table_name);
-        Self {
-            table_id: TableId::new(0),
-            table_name: vec![name.clone()],
-            original_name: vec![name],
-            columns: Vec::new(),
-        }
-    }
-
-    pub fn new2(table_name: Vec<Ident>) -> Self {
+    pub fn new(table_name: impl ToOptName) -> Self {
+        let table_name = table_name.to_op_name();
         Self {
             table_id: TableId::new(0),
             table_name: table_name.clone(),
@@ -220,9 +193,10 @@ impl Table {
         self.table_name == other.table_name
     }
 
-    pub fn add_alias(&mut self, alias: Option<&Ident>) {
+    pub fn add_alias(&mut self, alias: impl ToOptName) {
+        let alias = alias.to_op_name();
         if let Some(alias) = alias {
-            self.table_name = vec![alias.clone()];
+            self.table_name = Some(alias);
         }
     }
 }
@@ -279,5 +253,45 @@ impl TableColumn {
             column_name,
             catalog_nullable,
         }
+    }
+}
+
+pub trait ToOptName {
+    fn to_op_name(self) -> Option<Vec<Ident>>;
+}
+
+impl ToOptName for &str {
+    fn to_op_name(self) -> Option<Vec<Ident>> {
+        Some(vec![Ident::new(self)])
+    }
+}
+
+impl ToOptName for &Ident {
+    fn to_op_name(self) -> Option<Vec<Ident>> {
+        Some(vec![self.clone()])
+    }
+}
+
+impl ToOptName for &[Ident] {
+    fn to_op_name(self) -> Option<Vec<Ident>> {
+        Some(self.to_vec())
+    }
+}
+
+impl ToOptName for Vec<Ident> {
+    fn to_op_name(self) -> Option<Vec<Ident>> {
+        Some(self)
+    }
+}
+
+impl ToOptName for Option<Ident> {
+    fn to_op_name(self) -> Option<Vec<Ident>> {
+        Some(vec![self?])
+    }
+}
+
+impl ToOptName for &Option<TableAlias> {
+    fn to_op_name(self) -> Option<Vec<Ident>> {
+        self.as_ref().map(|f| f.name.clone()).to_op_name()
     }
 }

@@ -6,6 +6,7 @@ use sqlparser::ast::{Expr, Ident, TableFactor, TableWithJoins, With};
 use crate::{
     cte::visit_cte,
     nullable::NullableResult,
+    query::nullable_from_query,
     wal::{Wal, WalEntry},
     Source, Table, TableColumn, TableId, Tables,
 };
@@ -40,11 +41,21 @@ impl Context {
                     .source
                     .find_by_original_name(&name.0)
                     .context(format!("could not find table by original name: {name:?}"))?;
-                table.add_alias(alias.as_ref().map(|alias| &alias.name));
+                table.add_alias(alias);
                 self.push(table);
                 Ok(())
             }
-            _ => Ok(()),
+            TableFactor::Derived {
+                lateral: _,
+                subquery,
+                alias,
+            } => {
+                let nullables = nullable_from_query(subquery, self)?;
+                let table = nullables.flatten().to_table(alias);
+                self.push(table);
+                Ok(())
+            }
+            rest => unimplemented!("{rest:#?}"),
         }
     }
 
@@ -56,7 +67,7 @@ impl Context {
                         .tables
                         .0
                         .iter()
-                        .find(|t| t.table_name == &[alias.name.clone()])
+                        .find(|t| t.table_name.as_deref() == Some(&[alias.name.clone()]))
                         .cloned();
                 }
                 self.tables.find_table_by_idents_table(&name.0).cloned()
@@ -99,7 +110,10 @@ impl Context {
     }
 
     pub fn find_table_by_idents_table(&self, name: &[Ident]) -> Option<&Table> {
-        self.tables.0.iter().find(|t| t.table_name == name)
+        self.tables
+            .0
+            .iter()
+            .find(|t| t.table_name.as_deref() == Some(name))
     }
 
     pub fn nullable_for_table_col(
@@ -149,7 +163,7 @@ impl Context {
             .tables
             .0
             .iter()
-            .find(|table| table.table_name == name[..name.len() - 1])
+            .find(|table| table.table_name.as_deref() == Some(&name[..name.len() - 1]))
         {
             if let Some(col) = table
                 .columns
@@ -165,7 +179,7 @@ impl Context {
             .tables
             .0
             .iter()
-            .find(|table| table.original_name == name[..name.len() - 1])
+            .find(|table| table.original_name.as_deref() == Some(&name[..name.len() - 1]))
         {
             if let Some(col) = table
                 .columns

@@ -1,6 +1,6 @@
 use sqlparser::ast::Ident;
 
-use crate::Table;
+use crate::{Table, ToOptName};
 
 #[derive(Debug)]
 pub enum NullablePlace {
@@ -10,14 +10,15 @@ pub enum NullablePlace {
 
 #[derive(Debug)]
 pub struct NullableResult {
-    pub place: NullablePlace,
+    pub column_name: Option<Ident>,
+    // pub place: NullablePlace,
     pub value: Option<bool>,
 }
 
 impl NullableResult {
     pub fn named(value: Option<bool>, name: &Ident) -> Self {
         Self {
-            place: NullablePlace::Named { name: name.clone() },
+            column_name: Some(name.clone()),
             value,
         }
     }
@@ -25,19 +26,15 @@ impl NullableResult {
     pub fn unnamed(value: Option<bool>) -> Self {
         Self {
             value,
-            place: NullablePlace::Unnamed,
+            column_name: None,
         }
     }
 
-    pub fn set_alias(self, alias: Option<Ident>) -> Self {
-        if let Some(alias) = alias {
-            Self {
-                place: NullablePlace::Named { name: alias },
-                value: self.value,
-            }
-        } else {
-            self
+    pub fn set_alias(mut self, alias: Option<Ident>) -> Self {
+        if alias.is_some() {
+            self.column_name = alias;
         }
+        self
     }
 }
 
@@ -74,13 +71,13 @@ impl Nullable {
     }
 
     fn l_find_index(&self, col_name: &Ident) -> Option<(usize, Option<bool>)> {
-        self.0
-            .iter()
-            .enumerate()
-            .find_map(|(index, nullable)| match &nullable.place {
-                NullablePlace::Named { name } if name == col_name => Some((index, nullable.value)),
-                _ => None,
-            })
+        self.0.iter().enumerate().find_map(|(index, nullable)| {
+            if nullable.column_name.as_ref() == Some(col_name) {
+                Some((index, nullable.value))
+            } else {
+                None
+            }
+        })
     }
 
     fn r_find_index(&self, col_name: &Ident) -> Option<(usize, Option<bool>)> {
@@ -89,21 +86,19 @@ impl Nullable {
         while index != 0 {
             index -= 1;
 
-            match &self.0[index].place {
-                NullablePlace::Named { name } if name == col_name => {
-                    return Some((index, self.0[index].value))
-                }
+            match &self.0[index].column_name {
+                Some(name) if name == col_name => return Some((index, self.0[index].value)),
                 _ => (),
             }
         }
         None
     }
 
-    pub fn to_table(self, table_name: Vec<Ident>) -> Table {
-        let mut table = Table::new2(table_name);
+    pub fn to_table(self, table_name: impl ToOptName) -> Table {
+        let mut table = Table::new(table_name);
 
         for row in self.0 {
-            if let NullablePlace::Named { name } = row.place {
+            if let Some(name) = row.column_name {
                 table = table.push_column2(name, row.value.unwrap_or(true))
             }
         }
@@ -172,11 +167,11 @@ impl StatementNullable {
                     (None, None) => None,
                 };
 
-                if let NullablePlace::Named { .. } = &first.0[i].place {
+                if first.0[i].column_name.is_some() {
                     first.0[i].value = value;
                     continue;
-                } else if let NullablePlace::Named { .. } = col.place {
-                    first.0[i].place = col.place;
+                } else if col.column_name.is_some() {
+                    first.0[i].column_name = col.column_name;
                     first.0[i].value = value;
                     continue;
                 }

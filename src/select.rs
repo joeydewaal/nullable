@@ -12,7 +12,7 @@ pub fn nullable_from_select(select: &Select, context: &mut Context) -> anyhow::R
     }
 
     // dbg!(&context.tables);
-    context.update_from_join(select);
+    context.update_from_join(select)?;
     context.update_from_where(select)?;
     dbg!(&context.tables);
     dbg!(&context.wal);

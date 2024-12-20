@@ -1,18 +1,27 @@
 use std::collections::HashSet;
 
+use anyhow::Context as _;
 use sqlparser::ast::{JoinConstraint, JoinOperator, Select};
 
 use crate::{context::Context, join_resolver::JoinResolver, Table, TableId};
 
 impl Context {
-    pub fn update_from_join(&mut self, select: &Select) {
+    pub fn update_from_join(&mut self, select: &Select) -> anyhow::Result<()> {
         for table in &select.from {
-            let base_table = self.find_table_by_table_factor(&table.relation).unwrap();
+            if table.joins.is_empty() {
+                continue;
+            }
+
+            let base_table = self
+                .find_table_by_table_factor(&table.relation)
+                .context(format!("Could not find {:?}", table.relation))?;
 
             let mut join_resolver = JoinResolver::from_base(base_table.table_id);
 
             for join in &table.joins {
-                let left_table = self.find_table_by_table_factor(&join.relation).unwrap();
+                let left_table = self
+                    .find_table_by_table_factor(&join.relation)
+                    .context(format!("Could not find {:?}", join.relation))?;
 
                 match &join.join_operator {
                     JoinOperator::LeftOuter(inner) => {
@@ -67,6 +76,7 @@ impl Context {
                 self.wal.add_table(table_id, nullable);
             }
         }
+        Ok(())
     }
 
     fn handle_join_constraint(
