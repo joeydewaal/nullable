@@ -274,3 +274,41 @@ right join pets pets2 on pets2.pet_id = users.pet_id
     println!("{:?}", nullable);
     assert!(nullable == [true, true, true, true, true, false, false])
 }
+
+#[test]
+pub fn cross_join_5() {
+    let table_1 = Table::new("users")
+        .push_column("id", false)
+        .push_column("username", false)
+        .push_column("pet_id", true);
+
+    let table_2 = Table::new("pets")
+        .push_column("pet_id", false)
+        .push_column("pet_name", false);
+
+    let source = Source::new(vec![table_1, table_2]);
+
+    let query = r#"
+select
+	users.*,
+	pets.*,
+	pets2.*
+from
+	users
+cross join pets
+full outer join pets pets2 on pets2.pet_id = users.pet_id
+    "#;
+
+    let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
+    let nullable = state.get_nullable(&[
+        "id",
+        "username",
+        "pet_id",
+        "pet_id",
+        "pet_name",
+        "pet_id",
+        "pet_name",
+    ]);
+    println!("{:?}", nullable);
+    assert!(nullable == [true, true, true, true, true, true, true])
+}
