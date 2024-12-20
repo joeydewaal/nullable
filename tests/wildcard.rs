@@ -44,7 +44,7 @@ pub fn wildcard_2() {
 pub fn wildcard_3() {
     let user_table = Table::new("users")
         .push_column("id", false)
-        .push_column("username", false)
+        .push_column("username", true)
         .push_column("emailadres", true)
         .push_column("pet_id", false);
 

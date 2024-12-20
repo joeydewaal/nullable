@@ -25,6 +25,8 @@ pub fn nullable_from_select(select: &Select, context: &mut Context) -> anyhow::R
         .flatten()
         .collect();
 
+    dbg!(&n);
+
     Ok(Nullable::new(n))
 }
 
@@ -52,8 +54,10 @@ pub fn visit_select_item(
 
             let table = context.find_table_by_idents_table(&table_name.0).unwrap();
 
+            dbg!(&table);
+
             for column in &table.columns {
-                results.push(context.nullable_for_ident(&[column.column_name.clone()])?);
+                results.push(context.nullable_for_table_col(table, column)?);
             }
 
             Ok(results)

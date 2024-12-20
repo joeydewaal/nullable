@@ -49,10 +49,6 @@ impl Nullable {
         Self::new(vec![])
     }
 
-    pub fn add(&mut self, nullable: NullableResult) {
-        self.0.push(nullable);
-    }
-
     pub fn append(&mut self, nullable: &mut Vec<NullableResult>) {
         self.0.append(nullable);
     }
@@ -61,15 +57,13 @@ impl Nullable {
         Self(inner)
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = &NullableResult> {
-        self.0.iter()
-    }
-
     pub fn into_iter(self) -> impl Iterator<Item = NullableResult> {
         self.0.into_iter()
     }
     pub fn nullable(&self, col_name: &str, index: usize) -> Option<bool> {
         let col_name = Ident::new(col_name);
+
+        dbg!(&self);
 
         if let Some((left_index, left_nullable)) = self.l_find_index(&col_name) {
             if let Some((right_index, _right_nullable)) = self.r_find_index(&col_name) {
@@ -184,6 +178,7 @@ impl StatementNullable {
     }
 
     pub fn get_nullable_final(self, cols: &[&str]) -> Vec<bool> {
+        dbg!(&self);
         let nullables = self.flatten();
 
         let mut results = Vec::new();
@@ -195,5 +190,3 @@ impl StatementNullable {
         results
     }
 }
-
-// pub fn nullable_from_info(column_nullable: Option<bool>, table_nullable: Option<bool>)

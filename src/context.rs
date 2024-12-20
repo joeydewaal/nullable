@@ -120,29 +120,35 @@ impl Context {
         self.tables.0.iter().find(|t| t.table_name == name)
     }
 
-    pub fn nullable_for_ident(&self, name: &[Ident]) -> anyhow::Result<NullableResult> {
-        let (col, table) = self.find_col_by_idents(name)?;
+    pub fn nullable_for_table_col(&self, table: &Table, col: &TableColumn) -> anyhow::Result<NullableResult> {
+        let mut col_name = table.table_name.clone();
+        col_name.push(col.column_name.clone());
 
         // check col nullable in wal
         if let Some(wal_nullable) = self.wal.nullable_for_col(table, col.column_id) {
-            println!("found col null {} {name:?}", wal_nullable);
+            println!("found col null {} {col_name:?}", wal_nullable);
             if wal_nullable {
-                return Ok(NullableResult::named(Some(wal_nullable), name));
+
+                return Ok(NullableResult::named(Some(wal_nullable), &col_name));
             }
         }
 
         // check table nullable in wal
         if let Some(wal_nullable) = self.nullable_for_table(table) {
             println!(
-                "found table null {} {name:?} {:?}",
+                "found table null {} {col_name:?} {:?}",
                 wal_nullable, table.table_id
             );
             if wal_nullable {
-                return Ok(NullableResult::named(Some(wal_nullable), name));
+                return Ok(NullableResult::named(Some(wal_nullable), &col_name));
             }
         }
 
-        Ok(NullableResult::named(Some(col.catalog_nullable), name))
+        Ok(NullableResult::named(Some(col.catalog_nullable), &col_name))
+    }
+    pub fn nullable_for_ident(&self, name: &[Ident]) -> anyhow::Result<NullableResult> {
+        let (col, table) = self.find_col_by_idents(name)?;
+        self.nullable_for_table_col(table, &col)
     }
     pub fn find_col_by_idents(&self, name: &[Ident]) -> anyhow::Result<(TableColumn, &Table)> {
         // search for col
