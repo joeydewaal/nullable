@@ -22,6 +22,10 @@ impl Source {
             .find(|t| t.original_name == name)
             .cloned()
     }
+
+    pub fn push(&mut self, table: Table) {
+        self.tables.push(table);
+    }
 }
 
 #[derive(Default, Debug, Clone)]
@@ -184,6 +188,24 @@ impl Table {
         }
     }
 
+    pub fn new2(table_name: Vec<Ident>) -> Self {
+        Self {
+            table_id: TableId::new(0),
+            table_name: table_name.clone(),
+            original_name: table_name,
+            columns: Vec::new(),
+        }
+    }
+
+    pub fn push_column2(mut self, column_name: Ident, catalog_nullable: bool) -> Self {
+        self.columns.push(TableColumn::new(
+            column_name,
+            catalog_nullable,
+            self.table_id,
+            ColumnId::new(self.columns.len()),
+        ));
+        self
+    }
     pub fn push_column(mut self, column_name: impl Into<String>, catalog_nullable: bool) -> Self {
         self.columns.push(TableColumn::new(
             Ident::new(column_name),

@@ -1,6 +1,6 @@
 use sqlparser::ast::Query;
 
-use crate::{context::Context, expr::nullable_from_expr, nullable::StatementNullable};
+use crate::{context::Context, expr::nullable_from_set_expr, nullable::StatementNullable};
 
 pub fn nullable_from_query(
     query: &Query,
@@ -10,5 +10,6 @@ pub fn nullable_from_query(
         context.add_with(&with);
     }
 
-    nullable_from_expr(&query.body, context)
+    dbg!(&context.tables);
+    nullable_from_set_expr(&query.body, context)
 }

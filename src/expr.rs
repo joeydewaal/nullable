@@ -10,7 +10,7 @@ use crate::{
     TableColumn,
 };
 
-pub fn nullable_from_expr(
+pub fn nullable_from_set_expr(
     expr: &SetExpr,
     context: &mut Context,
 ) -> anyhow::Result<StatementNullable> {
@@ -23,8 +23,8 @@ pub fn nullable_from_expr(
             right,
         } => {
             let mut nullable = StatementNullable::new();
-            nullable.combine(nullable_from_expr(&left, context)?);
-            nullable.combine(nullable_from_expr(&right, context)?);
+            nullable.combine(nullable_from_set_expr(&left, context)?);
+            nullable.combine(nullable_from_set_expr(&right, context)?);
             Ok(nullable)
         }
         _ => unimplemented!("{expr:?}"),

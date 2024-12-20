@@ -8,7 +8,7 @@ use crate::{
 
 pub fn nullable_from_select(select: &Select, context: &mut Context) -> anyhow::Result<Nullable> {
     for table in &select.from {
-        context.add_active_tables(table);
+        context.add_active_tables(table)?;
     }
 
     // dbg!(&context.tables);

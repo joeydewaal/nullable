@@ -1,8 +1,10 @@
 use sqlparser::ast::Ident;
 
+use crate::Table;
+
 #[derive(Debug)]
 pub enum NullablePlace {
-    Named { name: Vec<Ident> },
+    Named { name: Ident },
     Unnamed,
 }
 
@@ -13,11 +15,9 @@ pub struct NullableResult {
 }
 
 impl NullableResult {
-    pub fn named(value: Option<bool>, _name: &[Ident]) -> Self {
+    pub fn named(value: Option<bool>, name: &Ident) -> Self {
         Self {
-            place: NullablePlace::Named {
-                name: _name.to_vec(),
-            },
+            place: NullablePlace::Named { name: name.clone() },
             value,
         }
     }
@@ -32,7 +32,7 @@ impl NullableResult {
     pub fn set_alias(self, alias: Option<Ident>) -> Self {
         if let Some(alias) = alias {
             Self {
-                place: NullablePlace::Named { name: vec![alias] },
+                place: NullablePlace::Named { name: alias },
                 value: self.value,
             }
         } else {
@@ -78,9 +78,7 @@ impl Nullable {
             .iter()
             .enumerate()
             .find_map(|(index, nullable)| match &nullable.place {
-                NullablePlace::Named { name } if name.last() == Some(col_name) => {
-                    Some((index, nullable.value))
-                }
+                NullablePlace::Named { name } if name == col_name => Some((index, nullable.value)),
                 _ => None,
             })
     }
@@ -92,13 +90,25 @@ impl Nullable {
             index -= 1;
 
             match &self.0[index].place {
-                NullablePlace::Named { name } if name.last() == Some(col_name) => {
+                NullablePlace::Named { name } if name == col_name => {
                     return Some((index, self.0[index].value))
                 }
                 _ => (),
             }
         }
         None
+    }
+
+    pub fn to_table(self, table_name: Vec<Ident>) -> Table {
+        let mut table = Table::new2(table_name);
+
+        for row in self.0 {
+            if let NullablePlace::Named { name } = row.place {
+                table = table.push_column2(name, row.value.unwrap_or(true))
+            }
+        }
+
+        table
     }
 }
 

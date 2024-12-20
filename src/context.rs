@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use anyhow::anyhow;
+use anyhow::{anyhow, Context as _};
 use sqlparser::ast::{Expr, Ident, TableFactor, TableWithJoins, With};
 
 use crate::{
@@ -25,21 +25,26 @@ impl Context {
         }
     }
 
-    pub fn add_active_tables(&mut self, table: &TableWithJoins) {
-        self.visit_table_factor(&&table.relation);
+    pub fn add_active_tables(&mut self, table: &TableWithJoins) -> anyhow::Result<()> {
+        self.visit_table_factor(&&table.relation)?;
         for join_table in &table.joins {
-            self.visit_table_factor(&&join_table.relation);
+            self.visit_table_factor(&&join_table.relation)?;
         }
+        Ok(())
     }
 
-    pub fn visit_table_factor(&mut self, table: &TableFactor) {
+    pub fn visit_table_factor(&mut self, table: &TableFactor) -> anyhow::Result<()> {
         match table {
             TableFactor::Table { name, alias, .. } => {
-                let mut table = self.source.find_by_original_name(&name.0).unwrap();
+                let mut table = self
+                    .source
+                    .find_by_original_name(&name.0)
+                    .context(format!("could not find table by original name: {name:?}"))?;
                 table.add_alias(alias.as_ref().map(|alias| &alias.name));
                 self.push(table);
+                Ok(())
             }
-            _ => (),
+            _ => Ok(()),
         }
     }
 
@@ -102,8 +107,7 @@ impl Context {
         table: &Table,
         col: &TableColumn,
     ) -> anyhow::Result<NullableResult> {
-        let mut col_name = table.table_name.clone();
-        col_name.push(col.column_name.clone());
+        let col_name = col.column_name.clone();
 
         // check col nullable in wal
         if let Some(wal_nullable) = self.wal.nullable_for_col(table, col.column_id) {
