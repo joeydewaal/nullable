@@ -36,6 +36,15 @@ impl NullableResult {
         }
         self
     }
+
+    pub fn combine(&mut self, other: NullableResult) {
+        self.value =  match (self.value, other.value) {
+            (Some(first), Some(second)) => Some(first || second),
+            (Some(first), None) => Some(first),
+            (None, Some(second)) => Some(second),
+            (None, None) => None,
+        }
+    }
 }
 
 #[derive(Default, Debug)]
@@ -54,9 +63,21 @@ impl Nullable {
         Self(inner)
     }
 
-    pub fn into_iter(self) -> impl Iterator<Item = NullableResult> {
-        self.0.into_iter()
+    pub fn push(&mut self, null: NullableResult) {
+        self.0.push(null);
     }
+
+    pub fn to_result(mut self) -> Option<NullableResult> {
+        let mut result = self.0.pop()?;
+        for other in self.0 {
+            result.combine(other);
+        }
+        Some(result)
+    }
+
+    // pub fn into_iter(self) -> impl Iterator<Item = NullableResult> {
+    //     self.0.into_iter()
+    // }
     pub fn nullable(&self, col_name: &str, index: usize) -> Option<bool> {
         let col_name = Ident::new(col_name);
 
@@ -67,6 +88,10 @@ impl Nullable {
                 }
             }
         }
+        self.0[index].value
+    }
+
+    pub fn nullable_index(&self, index: usize) -> Option<bool> {
         self.0[index].value
     }
 
@@ -125,6 +150,10 @@ impl StatementNullable {
         Self {
             nullables: Vec::new(),
         }
+    }
+
+    pub fn push(&mut self, nullable: Nullable) {
+        self.nullables.push(nullable);
     }
 
     pub fn combine(&mut self, mut null: Self) {

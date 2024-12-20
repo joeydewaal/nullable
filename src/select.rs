@@ -33,6 +33,7 @@ pub fn visit_select_item(
     select_item: &SelectItem,
     context: &mut Context,
 ) -> anyhow::Result<Vec<NullableResult>> {
+    dbg!(&select_item);
     match select_item {
         SelectItem::UnnamedExpr(expr) => Ok(vec![visit_expr(&expr, None, context)?]),
         SelectItem::ExprWithAlias { expr, alias } => {

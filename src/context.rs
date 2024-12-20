@@ -5,7 +5,8 @@ use sqlparser::ast::{Expr, Ident, TableFactor, TableWithJoins, With};
 
 use crate::{
     cte::visit_cte,
-    nullable::NullableResult,
+    expr::visit_expr,
+    nullable::{Nullable, NullableResult, StatementNullable},
     query::nullable_from_query,
     wal::{Wal, WalEntry},
     Source, Table, TableColumn, TableId, Tables,
@@ -52,6 +53,33 @@ impl Context {
             } => {
                 let nullables = nullable_from_query(subquery, self)?;
                 let table = nullables.flatten().to_table(alias);
+                self.push(table);
+                Ok(())
+            }
+            TableFactor::UNNEST {
+                alias,
+                array_exprs,
+                with_offset: _,
+                with_offset_alias: _,
+                with_ordinality: _,
+            } => {
+                let mut table = Table::new(None);
+
+                let nullable = {
+                    let results: Vec<_> = array_exprs
+                        .iter()
+                        .map(|expr| visit_expr(expr, None, self))
+                        .flatten()
+                        .collect();
+
+                    Nullable::new(results).nullable_index(0).unwrap_or(true)
+                };
+
+                if let Some(table_alias) = alias {
+                    table = table.push_column(&table_alias.name.value, nullable)
+                } else {
+                    table = table.push_column("unnest", nullable)
+                };
                 self.push(table);
                 Ok(())
             }

@@ -1,10 +1,10 @@
-use anyhow::Context as _;
+use anyhow::{anyhow, Context as _};
 use sqlparser::ast::{BinaryOperator, CastKind, Expr, Ident, SetExpr, SetOperator, Value};
 
 use crate::{
     context::Context,
     func::visit_func,
-    nullable::{NullableResult, StatementNullable},
+    nullable::{Nullable, NullableResult, StatementNullable},
     query::nullable_from_query,
     select::nullable_from_select,
     TableColumn,
@@ -84,6 +84,14 @@ pub fn visit_expr(
             let r = nullable_from_query(&query, context)
                 .map(|r| r.get_nullable().iter().any(|n| *n == Some(true)))?;
             Ok(NullableResult::unnamed(Some(r)).set_alias(alias))
+        }
+        Expr::Array(array) => {
+            let mut nullable = Nullable::empty();
+            for expr in &array.elem {
+                nullable.push(visit_expr(expr, None, context)?);
+            }
+            nullable.to_result().ok_or(anyhow!("Geen output gevonden"))
+
         }
         _ => unimplemented!("{:?}", expr),
     }

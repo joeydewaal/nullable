@@ -41,3 +41,31 @@ select id from (select 1 as id)
     println!("{:?}", nullable);
     assert!(nullable == [false])
 }
+
+#[test]
+pub fn nested_4() {
+    let source = Source::empty();
+
+    let query = r#"
+select * from  unnest(ARRAY[1, 2, 3])
+ "#;
+
+    let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
+    let nullable = state.get_nullable(&["unnest"]);
+    println!("{:?}", nullable);
+    assert!(nullable == [false])
+}
+
+#[test]
+pub fn nested_5() {
+    let source = Source::empty();
+
+    let query = r#"
+select * from  unnest(ARRAY[1, 2, 3])
+ "#;
+
+    let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
+    let nullable = state.get_nullable(&["unnest"]);
+    println!("{:?}", nullable);
+    assert!(nullable == [false])
+}
