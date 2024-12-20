@@ -81,7 +81,6 @@ pub fn visit_expr(
         }
         Expr::IsNotNull(_) => Ok(NullableResult::unnamed(None).set_alias(alias)),
         Expr::Subquery(query) => {
-            dbg!(&query);
             let r = nullable_from_query(&query, context)
                 .map(|r| r.get_nullable().iter().any(|n| *n == Some(true)))?;
             Ok(NullableResult::unnamed(Some(r)).set_alias(alias))

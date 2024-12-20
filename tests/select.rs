@@ -782,14 +782,7 @@ pub fn double_right_join2() {
  "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable = state.get_nullable(&[
-        "id",
-        "name",
-        "id",
-        "name",
-        "pet_id",
-        "pet_name"
-    ]);
+    let nullable = state.get_nullable(&["id", "name", "id", "name", "pet_id", "pet_name"]);
     println!("{:?}", nullable);
     assert!(nullable == [false, false, false, false, false, false])
 }

@@ -87,7 +87,6 @@ impl Context {
         }
     }
 
-
     pub fn recursive_find_joined_tables(&self, expr: &Expr, tables: &mut HashSet<Table>) {
         match expr {
             Expr::CompoundIdentifier(idents) => {
@@ -135,8 +134,8 @@ impl Context {
         // check table nullable in wal
         if let Some(wal_nullable) = self.nullable_for_table(table) {
             println!(
-                "found table null {} {name:?} {:?} {:?}",
-                wal_nullable, table.table_id, table.dependants
+                "found table null {} {name:?} {:?}",
+                wal_nullable, table.table_id
             );
             if wal_nullable {
                 return Ok(NullableResult::named(Some(wal_nullable), name));
@@ -210,11 +209,6 @@ impl Context {
     }
 
     pub fn nullable_for_table(&self, table: &Table) -> Option<bool> {
-        if let Some(dep) = table.dependants.first() {
-            let table = self.tables.find_table_id(*dep).unwrap();
-            return self.nullable_for_table(table);
-        }
-
         for row in self.wal.data.iter().rev() {
             match row {
                 WalEntry::TableNullable { table_id, nullable } if *table_id == table.table_id => {
@@ -264,7 +258,6 @@ impl Context {
                                         resolver.set_nullable_if_base(*r_table, false);
                                     }
                                 }
-                                // resolver.set_nullable(left_table, None);
                             },
                         );
                     }
@@ -287,10 +280,10 @@ impl Context {
                     _ => (),
                 }
             }
-            dbg!(&join_resolver);
-            let alefkjealskfj = join_resolver.get_nullables();
-            dbg!(&alefkjealskfj);
-            for (table_id, nullable) in alefkjealskfj {
+            // dbg!(&join_resolver);
+            let join_nullable = join_resolver.get_nullables();
+            // dbg!(&join_nullable);
+            for (table_id, nullable) in join_nullable {
                 self.wal.add_table(table_id, nullable);
             }
         }

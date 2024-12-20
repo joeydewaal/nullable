@@ -186,7 +186,6 @@ pub struct Table {
     pub original_name: Vec<Ident>,
     pub table_name: Vec<Ident>,
     pub columns: Vec<TableColumn>,
-    pub dependants: Vec<TableId>,
 }
 
 impl Table {
@@ -197,7 +196,6 @@ impl Table {
             table_name: vec![name.clone()],
             original_name: vec![name],
             columns: Vec::new(),
-            dependants: Vec::new(),
         }
     }
 
@@ -213,10 +211,6 @@ impl Table {
 
     pub fn equals(&self, other: &Self) -> bool {
         self.table_name == other.table_name
-    }
-
-    pub fn add_dependent(&mut self, other: &Self) {
-        self.dependants.push(other.table_id)
     }
 
     pub fn add_alias(&mut self, alias: Option<&Ident>) {
@@ -235,8 +229,14 @@ pub struct TableColumn {
     pub table_id: TableId,
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy)]
 pub struct TableId(usize);
+
+impl Debug for TableId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
 
 impl TableId {
     pub fn new(d: usize) -> Self {
@@ -244,8 +244,14 @@ impl TableId {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy)]
 pub struct ColumnId(usize);
+
+impl Debug for ColumnId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
 
 impl ColumnId {
     pub fn new(d: usize) -> Self {
