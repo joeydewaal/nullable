@@ -6,7 +6,7 @@ use sqlparser::ast::{Expr, Ident, TableFactor, TableWithJoins, With};
 use crate::{
     cte::visit_cte,
     expr::visit_expr,
-    nullable::{Nullable, NullableResult, StatementNullable},
+    nullable::{Nullable, NullableResult},
     query::nullable_from_query,
     wal::{Wal, WalEntry},
     Source, Table, TableColumn, TableId, Tables,

@@ -103,6 +103,24 @@ impl Context {
 
                 let _ = (callback)(*left_table, &right_tables, join_resolver);
             }
+            JoinConstraint::Using(col_name) => {
+                let right_tables: Vec<_> = self
+                    .tables
+                    .find_cols_by_idents(col_name)
+                    .into_iter()
+                    .map(|(_, t)| t.table_id)
+                    .collect();
+                let left_table = right_tables
+                    .iter()
+                    .find(|table| **table == left_joined_table.table_id)
+                    .unwrap();
+
+                for right_table in &right_tables {
+                    join_resolver.add_leaf(*right_table, *left_table, None);
+                }
+
+                let _ = (callback)(*left_table, &right_tables, join_resolver);
+            }
             other => unimplemented!("{other:?}"),
         }
     }

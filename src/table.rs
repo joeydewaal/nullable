@@ -66,9 +66,10 @@ impl Tables {
     }
 
     pub fn find_table_by_idents_table(&self, name: &[Ident]) -> Option<&Table> {
-        self.0.iter().find(|t| t.table_name.as_deref() == Some(name))
+        self.0
+            .iter()
+            .find(|t| t.table_name.as_deref() == Some(name))
     }
-
     pub fn find_col_by_idents(&self, name: &[Ident]) -> anyhow::Result<(TableColumn, &Table)> {
         // search for col
         if name.len() == 1 {
@@ -112,6 +113,21 @@ impl Tables {
         }
 
         return Err(anyhow!("Not found"));
+    }
+
+    pub fn find_cols_by_idents(&self, name: &[Ident]) -> Vec<(TableColumn,&Table)> {
+        let mut tables = Vec::new();
+
+        // search for col
+        for table in self.0.iter() {
+            for col in &table.columns {
+                if col.column_name == name[0] {
+                    tables.push((col.clone(), table));
+                    continue;
+                }
+            }
+        }
+        tables
     }
 
     pub fn table_from_expr(
