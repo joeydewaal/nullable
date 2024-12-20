@@ -13,6 +13,7 @@ mod table;
 mod wal;
 mod where_;
 mod values;
+mod insert;
 
 use sqlparser::dialect::{Dialect, PostgreSqlDialect, SQLiteDialect};
 pub use state::NullableState;

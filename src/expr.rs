@@ -7,6 +7,7 @@ use crate::{
     nullable::{Nullable, NullableResult, StatementNullable},
     query::nullable_from_query,
     select::nullable_from_select,
+    statement::nullable_from_statement,
     TableColumn,
 };
 
@@ -28,6 +29,8 @@ pub fn nullable_from_set_expr(
             Ok(nullable)
         }
         SetExpr::Values(values) => context.nullable_from_values(values),
+        SetExpr::Insert(insert) => nullable_from_statement(insert, context),
+        SetExpr::Update(update) => nullable_from_statement(update, context),
         _ => unimplemented!("{expr:?}"),
     }
 }

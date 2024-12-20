@@ -40,6 +40,9 @@ pub fn visit_func(func: &Function, context: &mut Context) -> anyhow::Result<Null
         "current_timestamp" if args_nullables(&func.args, context)?.is_empty() => {
             Some(false)
         }
+        "generate_series" => {
+            Some(false)
+        }
         _ => unimplemented!("{func:?}"),
     };
 
