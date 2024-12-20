@@ -52,6 +52,10 @@ impl Context {
                             },
                         );
                     }
+                    JoinOperator::CrossJoin => {
+                        join_resolver.add_leaf(base_table.table_id, left_table.table_id, None);
+                        join_resolver.set_nullable_if_base(base_table.table_id, false);
+                    }
                     JoinOperator::RightOuter(inner) => {
                         self.handle_join_constraint(
                             &mut join_resolver,
