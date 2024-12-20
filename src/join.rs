@@ -28,6 +28,7 @@ impl Context {
                         self.handle_join_constraint(
                             &mut join_resolver,
                             &inner,
+                            &base_table,
                             &left_table,
                             |left_table, right_table, resolver| {
                                 println!("left joined {:?} on {:?}", &left_table, right_table);
@@ -39,6 +40,7 @@ impl Context {
                         self.handle_join_constraint(
                             &mut join_resolver,
                             &inner,
+                            &base_table,
                             &left_table,
                             |left_table, right_table, resolver| {
                                 println!("inner joined {:?} on {:?}", &left_table, right_table);
@@ -54,6 +56,7 @@ impl Context {
                         self.handle_join_constraint(
                             &mut join_resolver,
                             &inner,
+                            &base_table,
                             &left_table,
                             |left_table, right_table, resolver| {
                                 println!("right joined {:?} on {:?}", &left_table, right_table);
@@ -83,6 +86,7 @@ impl Context {
         &mut self,
         join_resolver: &mut JoinResolver,
         constraint: &JoinConstraint,
+        base_table: &Table,
         left_joined_table: &Table,
         callback: impl Fn(TableId, &[TableId], &mut JoinResolver),
     ) {
@@ -110,6 +114,20 @@ impl Context {
                     .into_iter()
                     .map(|(_, t)| t.table_id)
                     .collect();
+                let left_table = right_tables
+                    .iter()
+                    .find(|table| **table == left_joined_table.table_id)
+                    .unwrap();
+
+                for right_table in &right_tables {
+                    join_resolver.add_leaf(*right_table, *left_table, None);
+                }
+
+                let _ = (callback)(*left_table, &right_tables, join_resolver);
+            }
+            JoinConstraint::Natural => {
+                let right_tables = vec![base_table.table_id,left_joined_table.table_id];
+
                 let left_table = right_tables
                     .iter()
                     .find(|table| **table == left_joined_table.table_id)
