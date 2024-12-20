@@ -45,6 +45,12 @@ impl JoinResolver {
         self.recursive_set_nullable(table_id, nullable, 1);
     }
 
+    pub fn set_nullable_if_base(&mut self, table_id: TableId, nullable: bool) {
+        if self.data.table_id == table_id {
+            self.data.nullable = Some(nullable);
+        }
+    }
+
     pub fn recursive_set_nullable(
         &mut self,
         table_id: TableId,

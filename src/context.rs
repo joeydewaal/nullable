@@ -70,110 +70,6 @@ impl Context {
         }
     }
 
-    pub fn update_nullable_from_select_joins(&mut self, select: &Select) {
-        for table in &select.from {
-            for join in &table.joins {
-                let base_table = self.find_table_by_table_factor(&table.relation).unwrap();
-                let base_table_nullable = self.nullable_for_table(&base_table);
-                let left_table = self.find_table_by_table_factor(&join.relation).unwrap();
-
-                match &join.join_operator {
-                    JoinOperator::LeftOuter(inner) => {
-                        self.handle_join_constraint(
-                            &inner,
-                            &left_table,
-                            |left_table, right_table| {
-                                println!(
-                                    "left joined {:?} on {:?}",
-                                    &left_table.0.table_name,
-                                    right_table
-                                        .iter()
-                                        .map(|t| t.0.table_name.clone())
-                                        .collect::<Vec<_>>()
-                                );
-                                (Some(true), vec![None; right_table.len()])
-                            },
-                        );
-                    }
-                    JoinOperator::Inner(inner) => {
-                        self.handle_join_constraint(
-                            &inner,
-                            &left_table,
-                            |(left_table, left_nullable), right_table| {
-                                println!(
-                                    "inner joined {:?} on {:?}",
-                                    &left_table.table_name,
-                                    right_table
-                                        .iter()
-                                        .map(|t| t.0.table_name.clone())
-                                        .collect::<Vec<_>>()
-                                );
-
-                                if let Some(index) =
-                                    right_table.iter().enumerate().find_map(|(i, t)| {
-                                        if t.0.equals(&base_table) {
-                                            Some(i)
-                                        } else {
-                                            None
-                                        }
-                                    })
-                                {
-                                    println!("joined on base table");
-
-                                    if base_table_nullable == Some(true) {
-                                        println!(
-                                            "base table: {:?} nullable",
-                                            base_table.table_name
-                                        );
-                                    }
-                                    let mut right_nullable = vec![None; right_table.len()];
-                                    right_nullable[index] = Some(false);
-                                    return (Some(false), right_nullable);
-                                }
-                                if right_table.iter().any(|t| t.1 == Some(true)) {
-                                    (Some(true), vec![None; right_table.len()])
-                                } else {
-                                    (Some(false), vec![Some(false); right_table.len()])
-                                }
-                            },
-                        );
-                    }
-                    JoinOperator::RightOuter(inner) => {
-                        self.handle_join_constraint(
-                            &inner,
-                            &left_table,
-                            |(left_table, _left_nullable), right_table| {
-                                println!(
-                                    "right joined {:?} on {:?}",
-                                    &left_table.table_name,
-                                    right_table
-                                        .iter()
-                                        .map(|t| t.0.table_name.clone())
-                                        .collect::<Vec<_>>()
-                                );
-
-                                (
-                                    Some(false),
-                                    right_table
-                                        .iter()
-                                        .map(|t| {
-                                            if t.0.equals(&left_table) {
-                                                None
-                                            } else {
-                                                Some(true)
-                                            }
-                                        })
-                                        .collect(),
-                                )
-                            },
-                        );
-                    }
-                    _ => (),
-                }
-            }
-        }
-    }
-
     pub fn find_table_by_table_factor(&self, factor: &TableFactor) -> Option<Table> {
         match &factor {
             TableFactor::Table { name, alias, .. } => {
@@ -191,65 +87,6 @@ impl Context {
         }
     }
 
-    fn handle_join_constraint(
-        &mut self,
-        constraint: &JoinConstraint,
-        left_joined_table: &Table,
-        callback: impl Fn(
-            &(Table, Option<bool>),
-            &[(Table, Option<bool>)],
-        ) -> (Option<bool>, Vec<Option<bool>>),
-    ) {
-        // println!("left_joined_col {:#?}", left_joined_table.table_name);
-        match &constraint {
-            JoinConstraint::On(expr) => {
-                let mut t = HashSet::new();
-                self.recursive_find_joined_tables(expr, &mut t);
-                let right_tables: Vec<(Table, Option<bool>)> = t
-                    .into_iter()
-                    .map(|t| (t.clone(), self.nullable_for_table(&t)))
-                    .collect();
-
-                let left_table = right_tables
-                    .iter()
-                    .find_map(|(table, null)| {
-                        if table.equals(&left_joined_table) {
-                            Some((table.clone(), *null))
-                        } else {
-                            None
-                        }
-                    })
-                    .unwrap();
-
-                let (nullable1, nullable2) = (callback)(&left_table, &right_tables);
-
-                for (nullable2, table) in nullable2.iter().zip(right_tables.clone()) {
-                    if let Some(null2) = nullable2 {
-                        self.wal.add_table(table.0.table_id, *null2);
-                    }
-                }
-                if let Some(null1) = nullable1 {
-                    self.wal.add_table(left_table.0.table_id, null1);
-                }
-
-                for right_t in right_tables.iter() {
-                    for table in self.tables.0.iter_mut() {
-                        if table.equals(&left_table.0)
-                            && !right_t.0.equals(&left_table.0)
-                            && !right_t.0.equals(&left_table.0)
-                        {
-                            println!(
-                                "adding {:?} to {:?}",
-                                right_t.0.table_name, table.table_name
-                            );
-                            table.add_dependent(&right_t.0)
-                        }
-                    }
-                }
-            }
-            _ => (),
-        }
-    }
 
     pub fn recursive_find_joined_tables(&self, expr: &Expr, tables: &mut HashSet<Table>) {
         match expr {
@@ -422,11 +259,11 @@ impl Context {
                             &left_table,
                             |left_table, right_table, resolver| {
                                 println!("inner joined {:?} on {:?}", &left_table, right_table);
-                                // for r_table in right_table {
-                                //     if *r_table != left_table {
-                                //         resolver.set_nullable(*r_table, None);
-                                //     }
-                                // }
+                                for r_table in right_table {
+                                    if *r_table != left_table {
+                                        resolver.set_nullable_if_base(*r_table, false);
+                                    }
+                                }
                                 // resolver.set_nullable(left_table, None);
                             },
                         );

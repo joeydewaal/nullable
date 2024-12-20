@@ -743,53 +743,53 @@ pub fn double_right_join() {
     assert!(nullable == [true, true, false, false, true, true])
 }
 
-// #[test]
-// pub fn double_right_join2() {
-//     let user_table = Table::new("users")
-//         .push_column("id", false)
-//         .push_column("name", false)
-//         .push_column("pet_id", true)
-//         .push_column("company_id", true);
+#[test]
+pub fn double_right_join2() {
+    let user_table = Table::new("users")
+        .push_column("id", false)
+        .push_column("name", false)
+        .push_column("pet_id", true)
+        .push_column("company_id", true);
 
-//     let pets_table = Table::new("pets")
-//         .push_column("pet_id", false)
-//         .push_column("pet_name", false);
+    let pets_table = Table::new("pets")
+        .push_column("pet_id", false)
+        .push_column("pet_name", false);
 
-//     let company_table = Table::new("company")
-//         .push_column("id", false)
-//         .push_column("name", false);
+    let company_table = Table::new("company")
+        .push_column("id", false)
+        .push_column("name", false);
 
-//     let source = Source::new(vec![user_table, pets_table, company_table]);
+    let source = Source::new(vec![user_table, pets_table, company_table]);
 
-//     let query = r#"
-//         select
-//             users.id,
-//             users.name,
-//             company.id,
-//             company.name,
-//             pets.pet_id,
-//             pets.pet_name
-//         from
-//             users
-//         right join
-//             company
-//         on
-//             company.id = users.company_id
-//         inner join
-//             pets
-//         on
-//             pets.pet_id = users.pet_id
-//  "#;
+    let query = r#"
+        select
+            users.id,
+            users.name,
+            company.id,
+            company.name,
+            pets.pet_id,
+            pets.pet_name
+        from
+            users
+        right join
+            company
+        on
+            company.id = users.company_id
+        inner join
+            pets
+        on
+            pets.pet_id = users.pet_id
+ "#;
 
-//     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-//     let nullable = state.get_nullable(&[
-//         "id",
-//         "name",
-//         "id",
-//         "name",
-//         "pet_id",
-//         "pet_name"
-//     ]);
-//     println!("{:?}", nullable);
-//     assert!(nullable == [false, false, false, false, false, false])
-// }
+    let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
+    let nullable = state.get_nullable(&[
+        "id",
+        "name",
+        "id",
+        "name",
+        "pet_id",
+        "pet_name"
+    ]);
+    println!("{:?}", nullable);
+    assert!(nullable == [false, false, false, false, false, false])
+}
