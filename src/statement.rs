@@ -1,18 +1,11 @@
 use sqlparser::ast::Statement;
 
-use crate::{
-    context::Context,
-    nullable::{Nullable, StatementNullable},
-    query::nullable_from_query,
-    select::visit_select_item,
-};
+use crate::{context::Context, nullable::{GetNullable, StatementNullable}};
 
-pub fn nullable_from_statement(
-    statement: &Statement,
-    context: &mut Context,
-) -> anyhow::Result<StatementNullable> {
+impl GetNullable for Statement {
+    fn nullable_for(context: &mut Context, statement: &Self) -> anyhow::Result<StatementNullable> {
     match statement {
-        Statement::Query(query) => nullable_from_query(query, context),
+        Statement::Query(query) => context.nullable_for(query),
         Statement::CreateTable(_)
         | Statement::CreateView { .. }
         | Statement::CreateIndex(_)
@@ -23,18 +16,15 @@ pub fn nullable_from_statement(
         Statement::Update {
             table, returning, ..
         } => {
-            let mut nullable = Nullable::empty();
-
             if let Some(returning) = returning {
                 context.add_active_tables(table)?;
-                for item in returning {
-                    nullable.append(&mut visit_select_item(item, context)?);
-                }
+                return context.nullable_for(returning);
             }
-            Ok(nullable.into())
+            Ok(StatementNullable::new())
         }
-        Statement::Insert(insert) => context.nullables_from_insert(insert),
-        Statement::Delete(delete) => context.nullable_for_delete(delete),
+        Statement::Insert(insert) => context.nullable_for(insert),
+        Statement::Delete(delete) => context.nullable_for(delete),
         _ => unimplemented!("{statement:?}"),
+    }
     }
 }

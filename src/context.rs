@@ -4,7 +4,11 @@ use anyhow::{anyhow, Context as _};
 use sqlparser::ast::{Expr, Ident, TableFactor, TableWithJoins, With};
 
 use crate::{
-    cte::visit_cte, expr::visit_expr, nullable::{Nullable, NullableResult}, query::nullable_from_query, source::Source, wal::{Wal, WalEntry}, SqlFlavour, Table, TableColumn, TableId, Tables
+    expr::visit_expr,
+    nullable::{Nullable, NullableResult},
+    source::Source,
+    wal::{Wal, WalEntry},
+    SqlFlavour, Table, TableColumn, TableId, Tables,
 };
 
 pub struct Context {
@@ -20,7 +24,7 @@ impl Context {
             tables,
             source,
             wal,
-            flavour
+            flavour,
         }
     }
 
@@ -48,7 +52,7 @@ impl Context {
                 subquery,
                 alias,
             } => {
-                let nullables = nullable_from_query(subquery, self)?;
+                let nullables = self.nullable_for(subquery)?;
                 dbg!(&nullables);
                 let mut table = nullables.flatten(); //.to_table(alias);
                                                      //
@@ -128,10 +132,11 @@ impl Context {
         }
     }
 
-    pub fn add_with(&mut self, with: &With) {
+    pub fn add_with(&mut self, with: &With) -> anyhow::Result<()> {
         for cte in &with.cte_tables {
-            let _ = visit_cte(cte, self);
+            let _ = self.nullable_for(cte)?;
         }
+        Ok(())
     }
 
     pub fn nullable_for_idents(&self, ident: &[Ident]) -> anyhow::Result<NullableResult> {

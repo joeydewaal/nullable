@@ -17,6 +17,8 @@ mod insert;
 mod source;
 mod params;
 mod delete;
+mod select_item;
+mod set_expr;
 
 use sqlparser::dialect::{Dialect, PostgreSqlDialect, SQLiteDialect};
 pub use state::NullableState;

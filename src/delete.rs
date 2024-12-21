@@ -2,28 +2,23 @@ use sqlparser::ast::{Delete, FromTable};
 
 use crate::{
     context::Context,
-    nullable::{Nullable, StatementNullable},
-    select::visit_select_item,
+    nullable::{GetNullable, StatementNullable},
 };
 
-impl Context {
-    pub fn nullable_for_delete(&mut self, delete: &Delete) -> anyhow::Result<StatementNullable> {
-        let mut nullable = Nullable::empty();
-
+impl GetNullable for Delete {
+    fn nullable_for(context: &mut Context, delete: &Self) -> anyhow::Result<StatementNullable> {
         match &delete.from {
             FromTable::WithFromKeyword(tables) => {
                 for table in tables {
-                    self.add_active_tables(table)?;
+                    context.add_active_tables(table)?;
                 }
             }
             other => unimplemented!("{other:?}"),
         }
 
         if let Some(returning) = &delete.returning {
-            for item in returning {
-                nullable.append(&mut visit_select_item(item, self)?);
-            }
+            return context.nullable_for(returning);
         }
-        Ok(nullable.into())
+        Ok(StatementNullable::new())
     }
 }

@@ -3,7 +3,7 @@ use std::time::Instant;
 use sqlparser::{ast::Statement, parser::Parser};
 
 use crate::{
-    context::Context, source::Source, statement::nullable_from_statement, wal::Wal, SqlFlavour, Tables
+    context::Context, source::Source, wal::Wal, SqlFlavour, Tables
 };
 
 pub struct NullableState {
@@ -31,7 +31,7 @@ impl NullableState {
 
         let mut context = Context::new(Tables::new(), self.source.clone(), Wal::new(), self.flavour);
 
-        let inferred_nullable = nullable_from_statement(&s, &mut context).unwrap();
+        let inferred_nullable = context.nullable_for(s).unwrap();
         println!("{:?}", self.started.elapsed());
         inferred_nullable.get_nullable_final(cols)
     }

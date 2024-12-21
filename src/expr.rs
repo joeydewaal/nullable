@@ -1,39 +1,12 @@
 use anyhow::{anyhow, Context as _};
-use sqlparser::ast::{BinaryOperator, CastKind, Expr, Ident, SetExpr, SetOperator, Value};
+use sqlparser::ast::{BinaryOperator, CastKind, Expr, Ident, Value};
 
 use crate::{
     context::Context,
     func::visit_func,
-    nullable::{Nullable, NullableResult, StatementNullable},
-    query::nullable_from_query,
-    select::nullable_from_select,
-    statement::nullable_from_statement,
+    nullable::{Nullable, NullableResult},
     TableColumn,
 };
-
-pub fn nullable_from_set_expr(
-    expr: &SetExpr,
-    context: &mut Context,
-) -> anyhow::Result<StatementNullable> {
-    match expr {
-        SetExpr::Select(ref select) => nullable_from_select(select, context).map(|x| x.into()),
-        SetExpr::SetOperation {
-            op: SetOperator::Union,
-            set_quantifier: _,
-            left,
-            right,
-        } => {
-            let mut nullable = StatementNullable::new();
-            nullable.combine(nullable_from_set_expr(&left, context)?);
-            nullable.combine(nullable_from_set_expr(&right, context)?);
-            Ok(nullable)
-        }
-        SetExpr::Values(values) => context.nullable_from_values(values),
-        SetExpr::Insert(insert) => nullable_from_statement(insert, context),
-        SetExpr::Update(update) => nullable_from_statement(update, context),
-        _ => unimplemented!("{expr:?}"),
-    }
-}
 
 pub fn visit_expr(
     expr: &Expr,
@@ -88,7 +61,7 @@ pub fn visit_expr(
         }
         Expr::IsNotNull(_) => Ok(NullableResult::unnamed(None).set_alias(alias)),
         Expr::Subquery(query) => {
-            let r = nullable_from_query(&query, context)
+            let r = context.nullable_for(query)
                 .map(|r| r.get_nullable().iter().any(|n| *n == Some(true)))?;
             Ok(NullableResult::unnamed(Some(r)).set_alias(alias))
         }

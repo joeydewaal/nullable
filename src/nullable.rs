@@ -1,6 +1,6 @@
 use sqlparser::ast::Ident;
 
-use crate::{Table, ToOptName};
+use crate::{context::Context, Table, ToOptName};
 
 #[derive(Debug)]
 pub struct NullableResult {
@@ -217,5 +217,24 @@ impl StatementNullable {
         }
 
         results
+    }
+}
+
+pub trait GetNullable {
+    fn nullable_for(context: &mut Context, ty: &Self) -> anyhow::Result<StatementNullable>;
+}
+
+impl Context {
+    pub fn nullable_for<T>(&mut self, ty: &T) -> anyhow::Result<StatementNullable>
+    where
+        T: GetNullable,
+    {
+        T::nullable_for(self, ty)
+    }
+}
+
+impl<T> GetNullable for Box<T> where T: GetNullable {
+    fn nullable_for(context: &mut Context, ty: &Self) -> anyhow::Result<StatementNullable> {
+        GetNullable::nullable_for(context, ty.as_ref())
     }
 }

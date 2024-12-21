@@ -1,13 +1,20 @@
-use anyhow::Result;
 use sqlparser::ast::Cte;
 
-use crate::{context::Context, query::nullable_from_query};
+use crate::{
+    context::Context,
+    nullable::{GetNullable, StatementNullable},
+};
 
-pub fn visit_cte(cte: &Cte, context: &mut Context) -> Result<()> {
-    let nullable = nullable_from_query(&cte.query, context)?.flatten();
+impl GetNullable for Cte {
+    fn nullable_for(
+        context: &mut Context,
+        cte: &Self,
+    ) -> anyhow::Result<crate::nullable::StatementNullable> {
+        let nullable = context.nullable_for(&cte.query)?.flatten();
 
-    let table = nullable.to_table(vec![cte.alias.name.clone()]);
+        let table = nullable.to_table(vec![cte.alias.name.clone()]);
 
-    context.source.push(table);
-    Ok(())
+        context.source.push(table);
+        Ok(StatementNullable::new())
+    }
 }

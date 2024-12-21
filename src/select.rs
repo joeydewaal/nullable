@@ -3,27 +3,32 @@ use sqlparser::ast::{Select, SelectItem};
 use crate::{
     context::Context,
     expr::visit_expr,
-    nullable::{Nullable, NullableResult},
+    nullable::{GetNullable, Nullable, NullableResult},
 };
 
-pub fn nullable_from_select(select: &Select, context: &mut Context) -> anyhow::Result<Nullable> {
-    for table in &select.from {
-        context.add_active_tables(table)?;
+impl GetNullable for Select {
+    fn nullable_for(
+        context: &mut Context,
+        select: &Self,
+    ) -> anyhow::Result<crate::nullable::StatementNullable> {
+        for table in &select.from {
+            context.add_active_tables(table)?;
+        }
+
+        context.update_from_join(select)?;
+        context.update_from_where(select)?;
+        dbg!(&context.tables);
+        dbg!(&context.wal);
+
+        let n: Vec<_> = select
+            .projection
+            .iter()
+            .map(|c| visit_select_item(c, context).unwrap())
+            .flatten()
+            .collect();
+
+        Ok(Nullable::new(n).into())
     }
-
-    context.update_from_join(select)?;
-    context.update_from_where(select)?;
-    dbg!(&context.tables);
-    dbg!(&context.wal);
-
-    let n: Vec<_> = select
-        .projection
-        .iter()
-        .map(|c| visit_select_item(c, context).unwrap())
-        .flatten()
-        .collect();
-
-    Ok(Nullable::new(n))
 }
 
 pub fn visit_select_item(
