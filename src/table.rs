@@ -2,32 +2,6 @@ use anyhow::anyhow;
 use sqlparser::ast::{Expr, Ident, TableAlias, TableFactor};
 use std::fmt::Debug;
 
-#[derive(Debug, Clone)]
-pub struct Source {
-    tables: Vec<Table>,
-}
-
-impl Source {
-    pub fn new(tables: Vec<Table>) -> Self {
-        Source { tables }
-    }
-
-    pub fn empty() -> Self {
-        Self { tables: Vec::new() }
-    }
-
-    pub fn find_by_original_name(&self, name: &[Ident]) -> Option<Table> {
-        self.tables
-            .iter()
-            .find(|t| t.original_name.as_deref() == Some(name))
-            .cloned()
-    }
-
-    pub fn push(&mut self, table: Table) {
-        self.tables.push(table);
-    }
-}
-
 #[derive(Default, Debug, Clone)]
 pub struct Tables(pub Vec<Table>);
 

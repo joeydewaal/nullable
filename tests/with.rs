@@ -84,7 +84,7 @@ FROM
  "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable = state.get_nullable(&["pet_id", "pet_name"]);
+    let nullable = state.get_nullable(&["date", "date"]);
     println!("{:?}", nullable);
     assert!(nullable == [false, false])
 }

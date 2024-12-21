@@ -4,26 +4,23 @@ use anyhow::{anyhow, Context as _};
 use sqlparser::ast::{Expr, Ident, TableFactor, TableWithJoins, With};
 
 use crate::{
-    cte::visit_cte,
-    expr::visit_expr,
-    nullable::{Nullable, NullableResult},
-    query::nullable_from_query,
-    wal::{Wal, WalEntry},
-    Source, Table, TableColumn, TableId, Tables,
+    cte::visit_cte, expr::visit_expr, nullable::{Nullable, NullableResult}, query::nullable_from_query, source::Source, wal::{Wal, WalEntry}, SqlFlavour, Table, TableColumn, TableId, Tables
 };
 
 pub struct Context {
     pub tables: Tables,
     pub source: Source,
     pub wal: Wal,
+    pub flavour: SqlFlavour,
 }
 
 impl Context {
-    pub fn new(tables: Tables, source: Source, wal: Wal) -> Context {
+    pub fn new(tables: Tables, source: Source, wal: Wal, flavour: SqlFlavour) -> Context {
         Self {
             tables,
             source,
             wal,
+            flavour
         }
     }
 

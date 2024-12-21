@@ -61,6 +61,9 @@ pub fn visit_expr(
         } => Ok(NullableResult::unnamed(Some(false))),
         Expr::Value(value) => match value {
             Value::Null => Ok(NullableResult::unnamed(Some(true)).set_alias(alias)),
+            Value::Placeholder(param) => {
+                Ok(NullableResult::unnamed(context.nullable_for_param(&param)?).set_alias(alias))
+            }
             _ => Ok(NullableResult::unnamed(Some(false)).set_alias(alias)),
         },
         Expr::Cast {

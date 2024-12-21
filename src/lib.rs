@@ -14,10 +14,13 @@ mod wal;
 mod where_;
 mod values;
 mod insert;
+mod source;
+mod params;
 
 use sqlparser::dialect::{Dialect, PostgreSqlDialect, SQLiteDialect};
 pub use state::NullableState;
 pub use table::*;
+pub use source::Source;
 
 #[derive(Debug, Clone, Copy)]
 pub enum SqlFlavour {
