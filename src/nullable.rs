@@ -84,6 +84,8 @@ impl Nullable {
                 }
             }
         }
+
+        dbg!(&self);
         self.0[index].value
     }
 

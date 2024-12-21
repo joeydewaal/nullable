@@ -34,6 +34,7 @@ pub fn nullable_from_statement(
             Ok(nullable.into())
         }
         Statement::Insert(insert) => context.nullables_from_insert(insert),
+        Statement::Delete(delete) => context.nullable_for_delete(delete),
         _ => unimplemented!("{statement:?}"),
     }
 }
