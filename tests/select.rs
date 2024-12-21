@@ -786,3 +786,49 @@ pub fn double_right_join2() {
     println!("{:?}", nullable);
     assert!(nullable == [false, false, false, false, false, false])
 }
+
+#[test]
+pub fn double_right_join_3() {
+    let user_table = Table::new("users")
+        .push_column("user_id", false)
+        .push_column("name", false)
+        .push_column("emailadres", true)
+        .push_column("age", true)
+        .push_column("pet_id", true);
+
+    let pets_table = Table::new("pets")
+        .push_column("pet_id", false)
+        .push_column("pet_name", false)
+        .push_column("plant_id", false);
+
+    let plants_table = Table::new("plants")
+        .push_column("plant_id", false)
+        .push_column("plant_name", false);
+
+    let source = Source::new(vec![user_table, pets_table, plants_table]);
+
+    let query = r#"
+        select
+            u.user_id,
+            u.name,
+            p.pet_id,
+            p.pet_name,
+            pl.plant_id,
+            pl.plant_name
+        from
+            users as u
+        left join
+            pets as p
+        on
+            p.pet_id = u.pet_id
+        right join
+            plants as pl
+        on
+            pl.plant_id = p.plant_id
+     "#;
+
+    let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
+    let nullable = state.get_nullable(&["user_id", "name", "pet_id", "pet_name", "plant_id", "plant_name"]);
+    println!("{:?}", nullable);
+    assert!(nullable == [true, true, true, true, false, false])
+}

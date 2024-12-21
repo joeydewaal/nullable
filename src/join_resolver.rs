@@ -51,6 +51,49 @@ impl JoinResolver {
         }
     }
 
+    pub fn collapsing_set_nullable(&mut self, table_id: TableId, nullable: bool) {
+        self.recursive_collapsing_set_nullable(table_id, nullable);
+    }
+
+    pub fn recursive_collapsing_set_nullable(&mut self, table_id: TableId, nullable: bool) -> bool {
+        if self.data.table_id == table_id {
+            self.data.nullable = Some(nullable);
+            return true;
+        }
+
+        for t in &mut self.leafs {
+            if t.recursive_collapsing_set_nullable(table_id, nullable) {
+                self.data.nullable = Some(nullable);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    pub fn bubbling_not_null(&mut self, table_id: TableId) {
+        println!("bubling {table_id:?}");
+        self.recursive_bubbling_not_null(table_id);
+    }
+
+    pub fn recursive_bubbling_not_null(&mut self, table_id: TableId) -> bool {
+        if self.data.table_id == table_id {
+            if self.data.nullable != Some(false) {
+                self.data.nullable = Some(false);
+                println!("setting {table_id:?} false");
+                return true;
+            }
+            return false
+        }
+
+        for table in &mut self.leafs {
+            if table.recursive_bubbling_not_null(table_id) {
+                self.data.nullable = Some(false);
+                return true
+            }
+        }
+        return false
+    }
+
     pub fn recursive_set_nullable(
         &mut self,
         table_id: TableId,

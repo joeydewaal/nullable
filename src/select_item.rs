@@ -1,8 +1,7 @@
 use sqlparser::ast::SelectItem;
 
 use crate::{
-    nullable::{GetNullable, Nullable},
-    select::visit_select_item,
+    context::Context, expr::visit_expr, nullable::{GetNullable, Nullable, NullableResult}
 };
 
 impl GetNullable for Vec<SelectItem> {
@@ -15,5 +14,40 @@ impl GetNullable for Vec<SelectItem> {
             nullable.append(&mut visit_select_item(item, context)?);
         }
         Ok(nullable.into())
+    }
+}
+
+pub fn visit_select_item(
+    select_item: &SelectItem,
+    context: &mut Context,
+) -> anyhow::Result<Vec<NullableResult>> {
+    match select_item {
+        SelectItem::UnnamedExpr(expr) => Ok(vec![visit_expr(&expr, None, context)?]),
+        SelectItem::ExprWithAlias { expr, alias } => {
+            Ok(vec![visit_expr(&expr, Some(alias.clone()), context)?])
+        }
+        SelectItem::Wildcard(_wildcard) => {
+            let mut results = Vec::new();
+
+            for table in context.iter_tables() {
+                for column in table.columns.iter() {
+                    results.push(context.nullable_for_idents(&[column.column_name.clone()])?);
+                }
+            }
+            Ok(results)
+        }
+        SelectItem::QualifiedWildcard(table_name, _wildcard) => {
+            let mut results = Vec::new();
+
+            let table = context.find_table_by_idents_table(&table_name.0).unwrap();
+
+            dbg!(&table);
+
+            for column in &table.columns {
+                results.push(context.nullable_for_table_col(table, column)?);
+            }
+
+            Ok(results)
+        }
     }
 }

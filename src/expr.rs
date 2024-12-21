@@ -4,6 +4,7 @@ use sqlparser::ast::{BinaryOperator, CastKind, Expr, Ident, Value};
 use crate::{
     context::Context,
     func::visit_func,
+    join_resolver::JoinResolver,
     nullable::{Nullable, NullableResult},
     TableColumn,
 };
@@ -61,7 +62,8 @@ pub fn visit_expr(
         }
         Expr::IsNotNull(_) => Ok(NullableResult::unnamed(None).set_alias(alias)),
         Expr::Subquery(query) => {
-            let r = context.nullable_for(query)
+            let r = context
+                .nullable_for(query)
                 .map(|r| r.get_nullable().iter().any(|n| *n == Some(true)))?;
             Ok(NullableResult::unnamed(Some(r)).set_alias(alias))
         }
@@ -76,14 +78,20 @@ pub fn visit_expr(
     }
 }
 
-pub fn get_nullable_col(expr: &Expr, context: &mut Context) -> anyhow::Result<()> {
+pub fn get_nullable_col(
+    expr: &Expr,
+    context: &mut Context,
+    join_resolvers: &mut [JoinResolver],
+) -> anyhow::Result<()> {
     match expr {
         Expr::IsNotNull(not_null) => {
             if let Some(column) = get_column(&not_null, context)? {
                 context
                     .wal
                     .add_column(column.table_id, column.column_id, false);
-                context.wal.add_table(column.table_id, false);
+                for t in join_resolvers {
+                    t.bubbling_not_null(column.table_id);
+                }
             }
             Ok(())
         }
@@ -95,7 +103,9 @@ pub fn get_nullable_col(expr: &Expr, context: &mut Context) -> anyhow::Result<()
                 context
                     .wal
                     .add_column(left_col.table_id, left_col.column_id, false);
-                context.wal.add_table(left_col.table_id, false);
+                for t in &mut *join_resolvers {
+                    t.bubbling_not_null(left_col.table_id);
+                }
             }
 
             if let (Some(right_col), Some(false)) = (
@@ -105,14 +115,16 @@ pub fn get_nullable_col(expr: &Expr, context: &mut Context) -> anyhow::Result<()
                 context
                     .wal
                     .add_column(right_col.table_id, right_col.column_id, false);
-                context.wal.add_table(right_col.table_id, false);
+                for t in &mut *join_resolvers {
+                    t.bubbling_not_null(right_col.table_id);
+                }
             }
 
             if *op != BinaryOperator::And {
                 return Ok(());
             }
-            get_nullable_col(left, context)?;
-            get_nullable_col(right, context)?;
+            get_nullable_col(left, context, join_resolvers)?;
+            get_nullable_col(right, context, join_resolvers)?;
 
             return Ok(());
         }

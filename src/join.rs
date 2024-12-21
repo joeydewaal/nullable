@@ -6,7 +6,9 @@ use sqlparser::ast::{JoinConstraint, JoinOperator, Select};
 use crate::{context::Context, join_resolver::JoinResolver, Table, TableId};
 
 impl Context {
-    pub fn update_from_join(&mut self, select: &Select) -> anyhow::Result<()> {
+    pub fn update_from_join(&mut self, select: &Select) -> anyhow::Result<Vec<JoinResolver>> {
+        let mut resolvers = Vec::new();
+
         for table in &select.from {
             if table.joins.is_empty() {
                 continue;
@@ -66,7 +68,7 @@ impl Context {
                                 println!("right joined {:?} on {:?}", &left_table, right_table);
                                 for r_table in right_table {
                                     if *r_table != left_table {
-                                        resolver.set_nullable(*r_table, Some(true));
+                                        resolver.collapsing_set_nullable(*r_table, true);
                                     }
                                 }
                                 resolver.set_nullable(left_table, Some(false));
@@ -93,14 +95,16 @@ impl Context {
                     operator => unimplemented!("{operator:?}"),
                 }
             }
-            dbg!(&join_resolver);
-            let join_nullable = join_resolver.get_nullables();
-            dbg!(&join_nullable);
-            for (table_id, nullable) in join_nullable {
-                self.wal.add_table(table_id, nullable);
-            }
+
+            resolvers.push(join_resolver);
+            // dbg!(&join_resolver);
+            // let join_nullable = join_resolver.get_nullables();
+            // dbg!(&join_nullable);
+            // for (table_id, nullable) in join_nullable {
+            //     self.wal.add_table(table_id, nullable);
+            // }
         }
-        Ok(())
+        Ok(resolvers)
     }
 
     fn handle_join_constraint(
