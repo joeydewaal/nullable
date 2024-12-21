@@ -8,4 +8,4 @@
 - [x] Returning
 - [x] Update
 - [x] Builtin functions
-- [ ] Delete
+- [x] Delete
