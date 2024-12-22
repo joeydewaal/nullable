@@ -1,6 +1,4 @@
-# nullable
-
-### Implemented
+#### Implemented
 - [x] Left, Right, Inner, Outer, Cross join
 - [x] Hardcoded values
 - [x] Query parameters
