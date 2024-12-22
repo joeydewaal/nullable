@@ -1,4 +1,3 @@
-use anyhow::anyhow;
 use sqlparser::ast::{
     Function, FunctionArg, FunctionArgExpr, FunctionArgumentList, FunctionArguments, ObjectName,
 };
@@ -6,11 +5,25 @@ use sqlparser::ast::{
 use crate::{context::Context, expr::visit_expr, nullable::NullableResult};
 
 pub fn visit_func(func: &Function, context: &mut Context) -> anyhow::Result<NullableResult> {
-    let function_name = func_name(&func.name)?;
-    let inferred_nullable = match function_name.to_lowercase().as_ref() {
-        "count" | "current_user" | "now" | "random" | "version" => Some(false),
-        "lower" | "upper" | "concat" | "length" | "abs" | "ceil" | "ceiling" | "floor"
-        | "round" | "power" | "sum" | "avg" | "min" | "max" => {
+    let function_name = func_name(&func.name);
+    let f: Vec<_> = function_name.iter().map(|n| n.as_str()).collect();
+    let inferred_nullable = match f[..] {
+        ["count"] | ["current_user"] | ["now"] | ["random"] | ["version"] => Some(false),
+        ["lower"]
+        | ["upper"]
+        | ["concat"]
+        | ["length"]
+        | ["abs"]
+        | ["ceil"]
+        | ["ceiling"]
+        | ["floor"]
+        | ["round"]
+        | ["power"]
+        | ["sum"]
+        | ["avg"]
+        | ["min"]
+        | ["max"]
+        | ["information_schema", "_pg_expandarray"] => {
             let nullables = args_nullables(&func.args, context)?;
 
             if nullables.len() > 0 && nullables.iter().all(|n| *n == Some(false)) {
@@ -19,7 +32,7 @@ pub fn visit_func(func: &Function, context: &mut Context) -> anyhow::Result<Null
                 None
             }
         }
-        "coalesce" => {
+        ["coalesce"] => {
             let nullables = args_nullables(&func.args, context)?;
 
             if !nullables.is_empty() && nullables.iter().any(|n| *n == Some(false)) {
@@ -28,7 +41,7 @@ pub fn visit_func(func: &Function, context: &mut Context) -> anyhow::Result<Null
                 None
             }
         }
-        "array_agg" | "array_remove" => {
+        ["array_agg"] | ["array_remove"] => {
             let nullables = args_nullables(&func.args, context)?;
 
             if !nullables.is_empty() {
@@ -37,8 +50,8 @@ pub fn visit_func(func: &Function, context: &mut Context) -> anyhow::Result<Null
                 None
             }
         }
-        "current_timestamp" if args_nullables(&func.args, context)?.is_empty() => Some(false),
-        "generate_series" => Some(false),
+        ["current_timestamp"] if args_nullables(&func.args, context)?.is_empty() => Some(false),
+        ["generate_series"] => Some(false),
         _ => unimplemented!("{func:?}"),
     };
 
@@ -77,9 +90,6 @@ fn func_list_arg_nullable(
     }
 }
 
-fn func_name(obj: &ObjectName) -> anyhow::Result<String> {
-    obj.0
-        .first()
-        .map(|i| i.value.clone())
-        .ok_or(anyhow!("not found"))
+fn func_name(obj: &ObjectName) -> Vec<String> {
+    obj.0.iter().map(|i| i.value.to_lowercase()).collect()
 }

@@ -60,7 +60,6 @@ pub fn visit_expr(
                 return Ok(NullableResult::unnamed(None));
             }
         }
-        Expr::IsNotNull(_) => Ok(NullableResult::unnamed(None).set_alias(alias)),
         Expr::Subquery(query) => {
             let r = context
                 .nullable_for(query)
@@ -74,6 +73,51 @@ pub fn visit_expr(
             }
             nullable.to_result().ok_or(anyhow!("Geen output gevonden"))
         }
+        Expr::CompositeAccess { expr, key } => visit_expr(expr, Some(key.clone()), context),
+        Expr::InList {
+            expr,
+            list,
+            negated: _,
+        } => {
+            let mut nullable = Nullable::new(vec![visit_expr(expr, alias, context)?]);
+            for expr in list {
+                nullable.push(visit_expr(expr, None, context)?);
+            }
+            nullable.to_result().ok_or(anyhow!("Geen output gevonden"))
+        }
+        Expr::InSubquery {
+            expr,
+            subquery,
+            negated: _,
+        } => {
+            let result = visit_expr(expr, alias, context)?;
+
+            let mut nullable = context.nullable_for(subquery)?.flatten();
+            nullable.push(result);
+
+            nullable.to_result().ok_or(anyhow!("Geen output gevonden"))
+        }
+        Expr::InUnnest {
+            expr,
+            array_expr,
+            negated: _,
+        } => {
+            let nullable = Nullable::new(vec![
+                visit_expr(expr, alias, context)?,
+                visit_expr(array_expr, None, context)?,
+            ]);
+            nullable.to_result().ok_or(anyhow!("Geen output gevonden"))
+        }
+        Expr::IsTrue(_)
+        | Expr::IsFalse(_)
+        | Expr::IsNotTrue(_)
+        | Expr::IsNotFalse(_)
+        | Expr::IsNull(_)
+        | Expr::IsNotNull(_)
+        | Expr::IsUnknown(_)
+        | Expr::IsDistinctFrom(_, _)
+        | Expr::IsNotDistinctFrom(_, _)
+        | Expr::IsNotUnknown(_) => Ok(NullableResult::unnamed(Some(false)).set_alias(alias)),
         _ => unimplemented!("{:?}", expr),
     }
 }

@@ -1,5 +1,6 @@
 use mylib::{NullableState, Source, SqlFlavour, Table};
 
+
 #[test]
 pub fn one() {
     let orders_table = Table::new("vote")

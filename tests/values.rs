@@ -46,3 +46,116 @@ pub fn table_1() {
     println!("{:?}", nullable);
     assert!(nullable == [false, false, true])
 }
+
+#[test]
+pub fn compound_acces() {
+    let source = Source::empty();
+
+    let query = r#"
+        SELECT (information_schema._pg_expandarray(array['i','i'])).n
+ "#;
+
+    let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
+    let nullable = state.get_nullable(&["n"]);
+    println!("{:?}", nullable);
+    assert!(nullable == [false])
+}
+
+#[test]
+pub fn compound_acces_2() {
+    let source = Source::empty();
+
+    let query = r#"
+        SELECT (information_schema._pg_expandarray(array[NULL, NULL])).n
+ "#;
+
+    let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
+    let nullable = state.get_nullable(&["n"]);
+    println!("{:?}", nullable);
+    assert!(nullable == [true])
+}
+
+#[test]
+pub fn in_list() {
+    let source = Source::empty();
+
+    let query = r#"
+        SELECT 1 in (NULL, 2)
+ "#;
+
+    let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
+    let nullable = state.get_nullable(&["?column?"]);
+    println!("{:?}", nullable);
+    assert!(nullable == [true])
+}
+
+#[test]
+pub fn in_list_2() {
+    let source = Source::empty();
+
+    let query = r#"
+        SELECT 1 in (1, 2)
+ "#;
+
+    let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
+    let nullable = state.get_nullable(&["?column?"]);
+    println!("{:?}", nullable);
+    assert!(nullable == [false])
+}
+
+
+#[test]
+pub fn is_distinct_from() {
+    let source = Source::empty();
+
+    let query = r#"
+        SELECT 1 is distinct from null
+ "#;
+
+    let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
+    let nullable = state.get_nullable(&["?column?"]);
+    println!("{:?}", nullable);
+    assert!(nullable == [false])
+}
+
+#[test]
+pub fn in_subquery() {
+    let source = Source::empty();
+
+    let query = r#"
+        SELECT 1 in (select null::int)
+ "#;
+
+    let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
+    let nullable = state.get_nullable(&["?column?"]);
+    println!("{:?}", nullable);
+    assert!(nullable == [true])
+}
+
+#[test]
+pub fn in_subquery_2() {
+    let source = Source::empty();
+
+    let query = r#"
+        SELECT null in (select 1)
+ "#;
+
+    let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
+    let nullable = state.get_nullable(&["?column?"]);
+    println!("{:?}", nullable);
+    assert!(nullable == [true])
+}
+
+#[test]
+pub fn in_subquery_3() {
+    let source = Source::empty();
+
+    let query = r#"
+        SELECT 1 in (select 1)
+ "#;
+
+    let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
+    let nullable = state.get_nullable(&["?column?"]);
+    println!("{:?}", nullable);
+    assert!(nullable == [false])
+}

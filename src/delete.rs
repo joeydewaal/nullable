@@ -13,7 +13,7 @@ impl GetNullable for Delete {
                     context.add_active_tables(table)?;
                 }
             }
-            other => unimplemented!("{other:?}"),
+            FromTable::WithoutKeyword(_) => (),
         }
 
         if let Some(returning) = &delete.returning {
