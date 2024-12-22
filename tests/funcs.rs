@@ -43,8 +43,7 @@ pub fn func2() {
  "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable =
-        state.get_nullable(&["current_timestamp"]);
+    let nullable = state.get_nullable(&["current_timestamp"]);
     println!("{:?}", nullable);
     assert!(nullable == [false])
 }

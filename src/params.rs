@@ -9,7 +9,7 @@ impl Context {
             }
             SqlFlavour::Sqlite => {
                 let nullable = self.source.params.get(self.source.next_param_index);
-                    self.source.next_param_index += 1;
+                self.source.next_param_index += 1;
                 Ok(nullable.copied())
             }
         }

@@ -233,7 +233,10 @@ impl Context {
     }
 }
 
-impl<T> GetNullable for Box<T> where T: GetNullable {
+impl<T> GetNullable for Box<T>
+where
+    T: GetNullable,
+{
     fn nullable_for(context: &mut Context, ty: &Self) -> anyhow::Result<StatementNullable> {
         GetNullable::nullable_for(context, ty.as_ref())
     }

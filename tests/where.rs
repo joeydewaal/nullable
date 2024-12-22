@@ -238,7 +238,6 @@ pub fn where8() {
     assert!(nullable == [false, false, false, true, false])
 }
 
-
 #[test]
 pub fn where9() {
     let user_table = Table::new("users")
@@ -282,7 +281,14 @@ pub fn where9() {
      "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable = state.get_nullable(&["user_id", "name", "pet_id", "pet_name", "plant_id", "plant_name"]);
+    let nullable = state.get_nullable(&[
+        "user_id",
+        "name",
+        "pet_id",
+        "pet_name",
+        "plant_id",
+        "plant_name",
+    ]);
     println!("{:?}", nullable);
     assert!(nullable == [false, false, false, false, true, true])
 }
@@ -330,9 +336,16 @@ pub fn where10() {
      "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable = state.get_nullable(&["user_id", "name", "pet_id", "pet_name", "plant_id", "plant_name"]);
+    let nullable = state.get_nullable(&[
+        "user_id",
+        "name",
+        "pet_id",
+        "pet_name",
+        "plant_id",
+        "plant_name",
+    ]);
     println!("{:?}", nullable);
-    assert!(nullable == [false, false, false, false, false, false])
+    assert!(nullable == [false, false, true, true, false, false])
 }
 
 #[test]
@@ -378,11 +391,17 @@ pub fn where11() {
      "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable = state.get_nullable(&["user_id", "name", "pet_id", "pet_name", "plant_id", "plant_name"]);
+    let nullable = state.get_nullable(&[
+        "user_id",
+        "name",
+        "pet_id",
+        "pet_name",
+        "plant_id",
+        "plant_name",
+    ]);
     println!("{:?}", nullable);
     assert!(nullable == [true, true, true, true, false, false])
 }
-
 
 #[test]
 pub fn where12() {
@@ -427,9 +446,16 @@ pub fn where12() {
      "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable = state.get_nullable(&["user_id", "name", "pet_id", "pet_name", "plant_id", "plant_name"]);
+    let nullable = state.get_nullable(&[
+        "user_id",
+        "name",
+        "pet_id",
+        "pet_name",
+        "plant_id",
+        "plant_name",
+    ]);
     println!("{:?}", nullable);
-    assert!(nullable == [false, false, false, false, false, false])
+    assert!(nullable == [true, true, false, false, false, false])
 }
 
 #[test]
@@ -475,7 +501,14 @@ pub fn where13() {
      "#;
 
     let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
-    let nullable = state.get_nullable(&["user_id", "name", "pet_id", "pet_name", "plant_id", "plant_name"]);
+    let nullable = state.get_nullable(&[
+        "user_id",
+        "name",
+        "pet_id",
+        "pet_name",
+        "plant_id",
+        "plant_name",
+    ]);
     println!("{:?}", nullable);
-    assert!(nullable == [false, false, false, false, false, false])
+    assert!(nullable == [false, false, true, true, false, false])
 }

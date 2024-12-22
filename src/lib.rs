@@ -1,29 +1,29 @@
 mod context;
 mod cte;
+mod delete;
 mod expr;
 mod func;
+mod insert;
 mod join;
 mod join_resolver;
 mod nullable;
+mod params;
 mod query;
 mod select;
+mod select_item;
+mod set_expr;
+mod source;
 mod state;
 mod statement;
 mod table;
+mod values;
 mod wal;
 mod where_;
-mod values;
-mod insert;
-mod source;
-mod params;
-mod delete;
-mod select_item;
-mod set_expr;
 
+pub use source::Source;
 use sqlparser::dialect::{Dialect, PostgreSqlDialect, SQLiteDialect};
 pub use state::NullableState;
 pub use table::*;
-pub use source::Source;
 
 #[derive(Debug, Clone, Copy)]
 pub enum SqlFlavour {

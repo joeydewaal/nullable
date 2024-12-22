@@ -90,7 +90,7 @@ pub fn get_nullable_col(
                     .wal
                     .add_column(column.table_id, column.column_id, false);
                 for t in join_resolvers {
-                    t.bubbling_not_null(column.table_id);
+                    t.set_nullable(column.table_id, Some(false));
                 }
             }
             Ok(())
@@ -104,7 +104,7 @@ pub fn get_nullable_col(
                     .wal
                     .add_column(left_col.table_id, left_col.column_id, false);
                 for t in &mut *join_resolvers {
-                    t.bubbling_not_null(left_col.table_id);
+                    t.set_nullable(left_col.table_id, Some(false));
                 }
             }
 
@@ -116,7 +116,7 @@ pub fn get_nullable_col(
                     .wal
                     .add_column(right_col.table_id, right_col.column_id, false);
                 for t in &mut *join_resolvers {
-                    t.bubbling_not_null(right_col.table_id);
+                    t.set_nullable(right_col.table_id, Some(false));
                 }
             }
 

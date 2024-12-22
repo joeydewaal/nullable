@@ -1,7 +1,9 @@
 use sqlparser::ast::SelectItem;
 
 use crate::{
-    context::Context, expr::visit_expr, nullable::{GetNullable, Nullable, NullableResult}
+    context::Context,
+    expr::visit_expr,
+    nullable::{GetNullable, Nullable, NullableResult},
 };
 
 impl GetNullable for Vec<SelectItem> {
