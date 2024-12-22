@@ -15,7 +15,21 @@ impl GetNullable for Statement {
             | Statement::CreateType { .. }
             | Statement::CreateExtension { .. }
             | Statement::CreateRole { .. }
-            | Statement::CreateSchema { .. } => Ok(StatementNullable::new()),
+            | Statement::CreateSchema { .. }
+            | Statement::Copy { .. }
+            | Statement::Call(_)
+            | Statement::Close { .. }
+            | Statement::CreateVirtualTable { .. }
+            | Statement::CreateSecret { .. }
+            | Statement::Drop { .. }
+            | Statement::DropFunction { .. }
+            | Statement::DropProcedure { .. }
+            | Statement::DropSecret { .. }
+            | Statement::Declare { .. }
+            | Statement::Fetch { .. }
+            | Statement::Flush { .. }
+            | Statement::SetTimeZone { .. }
+            | Statement::ShowVariable { .. } => Ok(StatementNullable::new()),
             Statement::Update {
                 table, returning, ..
             } => {

@@ -23,6 +23,8 @@ impl GetNullable for SetExpr {
             SetExpr::Values(values) => context.nullable_for(values),
             SetExpr::Insert(insert) => context.nullable_for(insert),
             SetExpr::Update(update) => context.nullable_for(update),
+            SetExpr::Query(query) => context.nullable_for(query),
+            SetExpr::Table(table) => context.nullable_for(table),
             _ => unimplemented!("{expr:?}"),
         }
     }

@@ -1,6 +1,8 @@
-use anyhow::anyhow;
-use sqlparser::ast::{Expr, Ident, TableAlias, TableFactor};
+use anyhow::{anyhow, Context};
+use sqlparser::ast::{Expr, Ident, Table as ParserTable, TableAlias, TableFactor};
 use std::fmt::Debug;
+
+use crate::nullable::{GetNullable, Nullable, StatementNullable};
 
 #[derive(Default, Debug, Clone)]
 pub struct Tables(pub Vec<Table>);
@@ -283,5 +285,34 @@ impl ToOptName for Option<Ident> {
 impl ToOptName for &Option<TableAlias> {
     fn to_op_name(self) -> Option<Vec<Ident>> {
         self.as_ref().map(|f| f.name.clone()).to_op_name()
+    }
+}
+
+impl GetNullable for ParserTable {
+    fn nullable_for(
+        context: &mut crate::context::Context,
+        ty: &Self,
+    ) -> anyhow::Result<crate::nullable::StatementNullable> {
+        if let Some(table_name) = &ty.table_name {
+            let table = context
+                .source
+                .find_by_original_name(&[Ident::new(table_name)])
+                .context("could not find column")?;
+            context.push(table);
+            let mut results = Vec::new();
+
+            let table = context
+                .find_table_by_idents_table(&[Ident::new(table_name)])
+                .context("could not find column")?;
+
+            dbg!(&table);
+
+            for column in &table.columns {
+                results.push(context.nullable_for_table_col(table, column)?);
+            }
+            return Ok(Nullable::new(results).into());
+        }
+
+        Ok(StatementNullable::new())
     }
 }
