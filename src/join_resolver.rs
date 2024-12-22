@@ -1,12 +1,12 @@
 use crate::TableId;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct JoinResolver {
     data: JoinEntry,
     leafs: Vec<JoinResolver>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct JoinEntry {
     table_id: TableId,
     nullable: Option<bool>,
@@ -51,6 +51,12 @@ impl JoinResolver {
         }
     }
 
+    pub fn set_new_base(&mut self, base: TableId) {
+        let mut new_base = JoinResolver::from_base(base);
+        new_base.leafs = vec![self.clone()];
+        *self = new_base;
+    }
+
     pub fn collapsing_set_nullable(&mut self, table_id: TableId, nullable: bool) {
         self.recursive_collapsing_set_nullable(table_id, nullable);
     }
@@ -77,21 +83,18 @@ impl JoinResolver {
 
     pub fn recursive_bubbling_not_null(&mut self, table_id: TableId) -> bool {
         if self.data.table_id == table_id {
-            if self.data.nullable != Some(false) {
-                self.data.nullable = Some(false);
-                println!("setting {table_id:?} false");
-                return true;
-            }
-            return false
+            self.data.nullable = Some(false);
+            println!("setting {table_id:?} false");
+            return true;
         }
 
         for table in &mut self.leafs {
             if table.recursive_bubbling_not_null(table_id) {
                 self.data.nullable = Some(false);
-                return true
+                return true;
             }
         }
-        return false
+        return false;
     }
 
     pub fn recursive_set_nullable(

@@ -34,6 +34,10 @@ impl Context {
                             &left_table,
                             |left_table, right_table, resolver| {
                                 println!("left joined {:?} on {:?}", &left_table, right_table);
+
+                                for right_table in right_table {
+                                    resolver.add_leaf(*right_table, left_table, None);
+                                }
                                 resolver.set_nullable(left_table, Some(true));
                             },
                         );
@@ -46,6 +50,9 @@ impl Context {
                             &left_table,
                             |left_table, right_table, resolver| {
                                 println!("inner joined {:?} on {:?}", &left_table, right_table);
+                                for right_table in right_table {
+                                    resolver.add_leaf(*right_table, left_table, None);
+                                }
                                 for r_table in right_table {
                                     if *r_table != left_table {
                                         resolver.set_nullable_if_base(*r_table, false);
@@ -66,6 +73,7 @@ impl Context {
                             &left_table,
                             |left_table, right_table, resolver| {
                                 println!("right joined {:?} on {:?}", &left_table, right_table);
+                                resolver.set_new_base(left_table);
                                 for r_table in right_table {
                                     if *r_table != left_table {
                                         resolver.collapsing_set_nullable(*r_table, true);
@@ -83,6 +91,9 @@ impl Context {
                             &left_table,
                             |left_table, right_table, resolver| {
                                 println!("right joined {:?} on {:?}", &left_table, right_table);
+                                for right_table in right_table {
+                                    resolver.add_leaf(*right_table, left_table, None);
+                                }
                                 for r_table in right_table {
                                     if *r_table != left_table {
                                         resolver.set_nullable(*r_table, Some(true));
@@ -125,10 +136,6 @@ impl Context {
                     .iter()
                     .find(|table| **table == left_joined_table.table_id)
                     .unwrap();
-
-                for right_table in &right_tables {
-                    join_resolver.add_leaf(*right_table, *left_table, None);
-                }
 
                 let _ = (callback)(*left_table, &right_tables, join_resolver);
             }
