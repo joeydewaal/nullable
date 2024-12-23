@@ -51,7 +51,7 @@ impl Tables {
         if name.len() == 1 {
             for table in self.0.iter() {
                 for col in &table.columns {
-                    if col.column_name == name[0] {
+                    if col.column_name.as_ref() == Some(&name[0]) {
                         return Ok((col.clone(), table));
                     }
                 }
@@ -67,7 +67,7 @@ impl Tables {
             if let Some(col) = table
                 .columns
                 .iter()
-                .find(|column| Some(&column.column_name) == name.last())
+                .find(|column| column.column_name.as_ref() == name.last())
             {
                 return Ok((col.clone(), table));
             }
@@ -82,7 +82,7 @@ impl Tables {
             if let Some(col) = table
                 .columns
                 .iter()
-                .find(|column| Some(&column.column_name) == name.last())
+                .find(|column| column.column_name.as_ref() == name.last())
             {
                 return Ok((col.clone(), table));
             }
@@ -97,7 +97,7 @@ impl Tables {
         // search for col
         for table in self.0.iter() {
             for col in &table.columns {
-                if col.column_name == name[0] {
+                if col.column_name.as_ref() == Some(&name[0]) {
                     tables.push((col.clone(), table));
                     continue;
                 }
@@ -162,7 +162,7 @@ impl Table {
         }
     }
 
-    pub fn push_column2(mut self, column_name: Ident, catalog_nullable: bool) -> Self {
+    pub fn push_column2(mut self, column_name: Option<Ident>, catalog_nullable: bool) -> Self {
         self.columns.push(TableColumn::new(
             column_name,
             catalog_nullable,
@@ -173,7 +173,7 @@ impl Table {
     }
     pub fn push_column(mut self, column_name: impl Into<String>, catalog_nullable: bool) -> Self {
         self.columns.push(TableColumn::new(
-            Ident::new(column_name),
+            Some(Ident::new(column_name)),
             catalog_nullable,
             self.table_id,
             ColumnId::new(self.columns.len()),
@@ -195,7 +195,7 @@ impl Table {
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub struct TableColumn {
-    pub column_name: Ident,
+    pub column_name: Option<Ident>,
     pub catalog_nullable: bool,
 
     pub column_id: ColumnId,
@@ -234,7 +234,7 @@ impl ColumnId {
 
 impl TableColumn {
     pub fn new(
-        column_name: Ident,
+        column_name: Option<Ident>,
         catalog_nullable: bool,
         table_id: TableId,
         column_id: ColumnId,
@@ -305,7 +305,7 @@ impl GetNullable for ParserTable {
                 .find_table_by_idents_table(&[Ident::new(table_name)])
                 .context("could not find column")?;
 
-            dbg!(&table);
+            // dbg!(&table);
 
             for column in &table.columns {
                 results.push(context.nullable_for_table_col(table, column)?);

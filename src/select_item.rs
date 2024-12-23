@@ -28,22 +28,25 @@ pub fn visit_select_item(
         SelectItem::ExprWithAlias { expr, alias } => {
             Ok(vec![visit_expr(&expr, Some(alias.clone()), context)?])
         }
-        SelectItem::Wildcard(_wildcard) => {
+        SelectItem::Wildcard(_) => {
+            println!("flkasjdlfkjasldkfjaslkdjflaskdjflkasjdlfkjsalkdfj");
+            println!("{:?}", context.tables);
             let mut results = Vec::new();
 
             for table in context.iter_tables() {
                 for column in table.columns.iter() {
-                    results.push(context.nullable_for_idents(&[column.column_name.clone()])?);
+                    dbg!(&table, &column);
+                    results.push(context.nullable_for_table_col(&table, &column)?);
                 }
             }
+
+            dbg!(&results);
             Ok(results)
         }
         SelectItem::QualifiedWildcard(table_name, _wildcard) => {
             let mut results = Vec::new();
 
             let table = context.find_table_by_idents_table(&table_name.0).unwrap();
-
-            dbg!(&table);
 
             for column in &table.columns {
                 results.push(context.nullable_for_table_col(table, column)?);

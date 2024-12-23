@@ -33,7 +33,7 @@ impl Context {
                             &base_table,
                             &left_table,
                             |left_table, right_table, resolver| {
-                                println!("left joined {:?} on {:?}", &left_table, right_table);
+                                // println!("left joined {:?} on {:?}", &left_table, right_table);
 
                                 for right_table in right_table {
                                     resolver.add_leaf(*right_table, left_table, None);
@@ -49,7 +49,7 @@ impl Context {
                             &base_table,
                             &left_table,
                             |left_table, right_table, resolver| {
-                                println!("inner joined {:?} on {:?}", &left_table, right_table);
+                                // println!("inner joined {:?} on {:?}", &left_table, right_table);
                                 for right_table in right_table {
                                     resolver.add_leaf(*right_table, left_table, None);
                                 }
@@ -72,7 +72,7 @@ impl Context {
                             &base_table,
                             &left_table,
                             |left_table, right_table, resolver| {
-                                println!("right joined {:?} on {:?}", &left_table, right_table);
+                                // println!("right joined {:?} on {:?}", &left_table, right_table);
                                 resolver.set_new_base(left_table);
                                 for r_table in right_table {
                                     if *r_table != left_table {
@@ -90,7 +90,7 @@ impl Context {
                             &base_table,
                             &left_table,
                             |left_table, right_table, resolver| {
-                                println!("right joined {:?} on {:?}", &left_table, right_table);
+                                // println!("right joined {:?} on {:?}", &left_table, right_table);
                                 for right_table in right_table {
                                     resolver.add_leaf(*right_table, left_table, None);
                                 }

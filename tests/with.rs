@@ -88,3 +88,22 @@ FROM
     println!("{:?}", nullable);
     assert!(nullable == [false, false])
 }
+
+
+#[test]
+pub fn with_5() {
+    let source = Source::empty();
+
+    let query = r#"
+        with first as (
+            select 1
+        )
+        select * from first
+
+ "#;
+
+    let mut state = NullableState::new(query, source, SqlFlavour::Postgres);
+    let nullable = state.get_nullable(&["?column?"]);
+    println!("{:?}", nullable);
+    assert!(nullable == [false])
+}

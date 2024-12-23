@@ -2,13 +2,19 @@ use sqlparser::ast::Ident;
 
 use crate::{context::Context, Table, ToOptName};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NullableResult {
     pub column_name: Option<Ident>,
     pub value: Option<bool>,
 }
 
 impl NullableResult {
+    pub fn new(value: Option<bool>, column_name: Option<Ident>) -> Self {
+        Self {
+            value,
+            column_name
+        }
+    }
     pub fn named(value: Option<bool>, name: &Ident) -> Self {
         Self {
             column_name: Some(name.clone()),
@@ -40,7 +46,7 @@ impl NullableResult {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct Nullable(Vec<NullableResult>);
 
 impl Nullable {
@@ -85,7 +91,6 @@ impl Nullable {
             }
         }
 
-        dbg!(&self);
         self.0[index].value
     }
 
@@ -121,9 +126,7 @@ impl Nullable {
         let mut table = Table::new(table_name);
 
         for row in self.0 {
-            if let Some(name) = row.column_name {
-                table = table.push_column2(name, row.value.unwrap_or(true))
-            }
+            table = table.push_column2(row.column_name, row.value.unwrap_or(true))
         }
 
         table

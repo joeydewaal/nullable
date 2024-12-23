@@ -53,7 +53,7 @@ impl Context {
                 alias,
             } => {
                 let nullables = self.nullable_for(subquery)?;
-                dbg!(&nullables);
+                // dbg!(&nullables);
                 let mut table = nullables.flatten(); //.to_table(alias);
                                                      //
                 if let Some(alias) = alias {
@@ -61,7 +61,7 @@ impl Context {
                         col.column_name = Some(col_name);
                     }
                 }
-                dbg!(&table);
+                // dbg!(&table);
                 self.push(table.to_table(alias));
                 Ok(())
             }
@@ -164,7 +164,7 @@ impl Context {
         // check col nullable in wal
         if let Some(wal_nullable) = self.wal.nullable_for_col(table, col.column_id) {
             println!("found col null {} {col_name:?}", wal_nullable);
-            return Ok(NullableResult::named(Some(wal_nullable), &col_name));
+            return Ok(NullableResult::new(Some(wal_nullable), col_name));
         }
 
         // check table nullable in wal
@@ -174,11 +174,11 @@ impl Context {
                 wal_nullable, table.table_id
             );
             if wal_nullable {
-                return Ok(NullableResult::named(Some(wal_nullable), &col_name));
+                return Ok(NullableResult::new(Some(wal_nullable), col_name));
             }
         }
 
-        Ok(NullableResult::named(Some(col.catalog_nullable), &col_name))
+        Ok(NullableResult::new(Some(col.catalog_nullable), col_name))
     }
     pub fn nullable_for_ident(&self, name: &[Ident]) -> anyhow::Result<NullableResult> {
         let (col, table) = self.find_col_by_idents(name)?;
@@ -189,7 +189,7 @@ impl Context {
         if name.len() == 1 {
             for table in self.tables.0.iter() {
                 for col in &table.columns {
-                    if col.column_name == name[0] {
+                    if col.column_name.as_ref() == Some(&name[0]) {
                         return Ok((col.clone(), table));
                     }
                 }
@@ -206,7 +206,7 @@ impl Context {
             if let Some(col) = table
                 .columns
                 .iter()
-                .find(|column| Some(&column.column_name) == name.last())
+                .find(|column| column.column_name.as_ref() == name.last())
             {
                 return Ok((col.clone(), table));
             }
@@ -222,7 +222,7 @@ impl Context {
             if let Some(col) = table
                 .columns
                 .iter()
-                .find(|column| Some(&column.column_name) == name.last())
+                .find(|column| column.column_name.as_ref() == name.last())
             {
                 return Ok((col.clone(), table));
             }

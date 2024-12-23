@@ -31,7 +31,8 @@ impl NullableState {
             Context::new(Tables::new(), self.source.clone(), Wal::new(), self.flavour);
 
         let inferred_nullable = context.nullable_for(s).unwrap();
-        println!("{:?}", self.started.elapsed());
+        dbg!(&context.tables);
+        // println!("{:?}", self.started.elapsed());
         inferred_nullable.get_nullable_final(cols)
     }
 }

@@ -16,9 +16,9 @@ impl GetNullable for Select {
         }
 
         let mut resolvers = context.update_from_join(select)?;
-        dbg!(&resolvers);
+        // dbg!(&resolvers);
         context.update_from_where(select, &mut resolvers)?;
-        dbg!(&resolvers);
+        // dbg!(&resolvers);
         // dbg!(&context.tables);
         // dbg!(&context.wal);
 
