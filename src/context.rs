@@ -139,10 +139,6 @@ impl Context {
         Ok(())
     }
 
-    pub fn nullable_for_idents(&self, ident: &[Ident]) -> anyhow::Result<NullableResult> {
-        self.nullable_for_ident(ident)
-    }
-
     pub fn iter_tables(&self) -> impl Iterator<Item = &Table> {
         self.tables.0.iter()
     }

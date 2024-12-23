@@ -1,6 +1,6 @@
 use sqlparser::ast::Cte;
 
-use crate::{context::Context, nullable::GetNullable};
+use crate::{context::Context, nullable::{GetNullable, StatementNullable}};
 
 impl GetNullable for Cte {
     fn nullable_for(
@@ -9,14 +9,9 @@ impl GetNullable for Cte {
     ) -> anyhow::Result<crate::nullable::StatementNullable> {
         let nullable = context.nullable_for(&cte.query)?.flatten();
 
-        dbg!(&nullable);
+        let table = nullable.to_table(vec![cte.alias.name.clone()]);
 
-        let table = nullable.clone().to_table(vec![cte.alias.name.clone()]);
-
-        dbg!(&table);
-
-        context.push(table.clone());
         context.source.push(table);
-        Ok(nullable.into())
+        Ok(StatementNullable::new())
     }
 }

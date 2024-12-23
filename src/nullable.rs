@@ -15,12 +15,6 @@ impl NullableResult {
             column_name
         }
     }
-    pub fn named(value: Option<bool>, name: &Ident) -> Self {
-        Self {
-            column_name: Some(name.clone()),
-            value,
-        }
-    }
 
     pub fn unnamed(value: Option<bool>) -> Self {
         Self {
@@ -77,9 +71,7 @@ impl Nullable {
     pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut NullableResult> {
         self.0.iter_mut()
     }
-    // pub fn into_iter(self) -> impl Iterator<Item = NullableResult> {
-    //     self.0.into_iter()
-    // }
+
     pub fn nullable(&self, col_name: &str, index: usize) -> Option<bool> {
         let col_name = Ident::new(col_name);
 

@@ -29,18 +29,14 @@ pub fn visit_select_item(
             Ok(vec![visit_expr(&expr, Some(alias.clone()), context)?])
         }
         SelectItem::Wildcard(_) => {
-            println!("flkasjdlfkjasldkfjaslkdjflaskdjflkasjdlfkjsalkdfj");
-            println!("{:?}", context.tables);
             let mut results = Vec::new();
 
             for table in context.iter_tables() {
                 for column in table.columns.iter() {
-                    dbg!(&table, &column);
                     results.push(context.nullable_for_table_col(&table, &column)?);
                 }
             }
 
-            dbg!(&results);
             Ok(results)
         }
         SelectItem::QualifiedWildcard(table_name, _wildcard) => {
