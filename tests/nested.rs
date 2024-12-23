@@ -1,4 +1,4 @@
-use mylib::{NullableState, Source, SqlFlavour};
+use nullable::{NullableState, Source, SqlFlavour};
 
 #[test]
 pub fn nested() {
