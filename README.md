@@ -1,9 +1,14 @@
 #### Implemented
-- [x] Left, Right, Inner, Outer, Cross join
+- [x] Joins
+-   [x] Left, Right, Inner, Outer, Cross join
+-   [x] On, Using, Natural
 - [x] Hardcoded values
-- [x] Query parameters
+-   [x] Parameters
 - [x] With as
 - [x] Returning
 - [x] Update
-- [x] Builtin functions
 - [x] Delete
+- [ ] Functions
+-   [x] Builtin functions
+-   [ ]  Custom functions
+- [ ] ...
