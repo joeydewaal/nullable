@@ -159,16 +159,16 @@ impl Context {
 
         // check col nullable in wal
         if let Some(wal_nullable) = self.wal.nullable_for_col(table, col.column_id) {
-            println!("found col null {} {col_name:?}", wal_nullable);
+            // println!("found col null {} {col_name:?}", wal_nullable);
             return Ok(NullableResult::new(Some(wal_nullable), col_name));
         }
 
         // check table nullable in wal
         if let Some(wal_nullable) = self.nullable_for_table(table) {
-            println!(
-                "found table null {} {col_name:?} {:?}",
-                wal_nullable, table.table_id
-            );
+            // println!(
+                // "found table null {} {col_name:?} {:?}",
+                // wal_nullable, table.table_id
+            // );
             if wal_nullable {
                 return Ok(NullableResult::new(Some(wal_nullable), col_name));
             }

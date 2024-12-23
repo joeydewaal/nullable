@@ -7,6 +7,7 @@ use crate::{context::Context, source::Source, wal::Wal, SqlFlavour, Tables};
 pub struct NullableState {
     parsed_query: Vec<Statement>,
     source: Source,
+    #[allow(unused)]
     started: Instant,
     flavour: SqlFlavour,
 }
@@ -24,14 +25,13 @@ impl NullableState {
     }
 
     pub fn get_nullable(&mut self, cols: &[&str]) -> Vec<bool> {
-        dbg!(&self.parsed_query);
+        // dbg!(&self.parsed_query);
         let s = self.parsed_query.first().unwrap();
 
         let mut context =
             Context::new(Tables::new(), self.source.clone(), Wal::new(), self.flavour);
 
         let inferred_nullable = context.nullable_for(s).unwrap();
-        dbg!(&context.tables);
         // println!("{:?}", self.started.elapsed());
         inferred_nullable.get_nullable_final(cols)
     }

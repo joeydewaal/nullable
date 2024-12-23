@@ -11,7 +11,6 @@ impl GetNullable for Query {
             context.add_with(&with)?;
         }
 
-        dbg!(&context.tables);
         context.nullable_for(&query.body)
     }
 }
