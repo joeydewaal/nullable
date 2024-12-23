@@ -1,14 +1,14 @@
 #### Implemented
 - [x] Joins
--   [x] Left, Right, Inner, Outer, Cross join
--   [x] On, Using, Natural
+    - [x] Left, Right, Inner, Outer, Cross join
+    - [x] On, Using, Natural
 - [x] Hardcoded values
--   [x] Parameters
+    - [x] Parameters
 - [x] With as
 - [x] Returning
 - [x] Update
 - [x] Delete
 - [ ] Functions
--   [x] Builtin functions
--   [ ]  Custom functions
+    - [x] Builtin functions
+    - [ ]  Custom functions
 - [ ] ...
